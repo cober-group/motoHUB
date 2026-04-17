@@ -45,7 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (!res.ok) { logout(); return; }
       const data = await res.json();
-      setUser(data);
+      setUser({
+        id: data.id,
+        email: data.email,
+        role: data.role,
+        storeId: data.store_id ?? data.storeId ?? null,
+        store_name: data.store_name,
+        sqm: data.sqm,
+      });
     } catch {
       logout();
     }
