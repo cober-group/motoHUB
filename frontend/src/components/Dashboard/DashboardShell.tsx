@@ -16,7 +16,7 @@ export interface DashboardShellProps {
   onExitVisit?: () => void;
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '');
 const PAGE_SIZE = 20;
 
 export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode = false, onExitVisit }: DashboardShellProps) {
