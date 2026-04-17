@@ -3,7 +3,7 @@
 import { Canvas } from '@react-three/fiber';
 import { CameraControls, ContactShadows, Environment } from '@react-three/drei';
 import { useRef, useEffect } from 'react';
-import { PlacedItem } from '@/app/page';
+import { PlacedItem } from '@/types/store';
 import { StoreRoom } from './StoreRoom';
 import { HelmetDisplay } from './Items/HelmetDisplay';
 import { JacketRail } from './Items/JacketRail';

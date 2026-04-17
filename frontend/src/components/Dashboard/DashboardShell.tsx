@@ -5,14 +5,7 @@ import { useRouter } from 'next/navigation';
 import { StoreScene } from '@/components/Three/StoreScene';
 import { ProductModal } from '@/components/UI/ProductModal';
 import { useAuth, useApiFetch } from '@/context/AuthContext';
-
-interface PlacedItem {
-  id: string;
-  type: 'helmet' | 'jacket' | 'central';
-  position: [number, number, number];
-  rotation: [number, number, number];
-  assignedProducts?: Record<number, any>;
-}
+import { PlacedItem } from '@/types/store';
 
 export interface DashboardShellProps {
   role: 'admin' | 'store';
