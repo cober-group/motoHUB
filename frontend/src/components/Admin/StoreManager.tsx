@@ -25,9 +25,10 @@ interface OdooLocation {
 
 interface StoreManagerProps {
   onVisitStore: (store: Store) => void;
+  onEditStore: (store: Store) => void;
 }
 
-export function StoreManager({ onVisitStore }: StoreManagerProps) {
+export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
   const apiFetch = useApiFetch();
   const [stores, setStores] = useState<Store[]>([]);
   const [locations, setLocations] = useState<OdooLocation[]>([]);
@@ -170,6 +171,7 @@ export function StoreManager({ onVisitStore }: StoreManagerProps) {
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <button style={S.btnBlue} onClick={() => onVisitStore(store)}>👁 VISITA</button>
+              <button style={{ ...S.btnBlue, color: '#c8ff1d', borderColor: 'rgba(200,255,29,0.3)', background: 'rgba(200,255,29,0.07)' }} onClick={() => onEditStore(store)}>✏️ MODIFICA</button>
               <button style={S.btnBlue} onClick={() => toggleExpand(store.id)}>{expandedStore === store.id ? '▲ CHIUDI' : '⚙ GESTISCI'}</button>
               <button style={S.btnRed} onClick={() => handleDeleteStore(store.id)}>ELIMINA</button>
             </div>
