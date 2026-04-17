@@ -82,7 +82,7 @@ export const JacketRail = memo(function JacketRail({ id, position, rotation, ass
       })}
 
       <Text position={[0, 3.1, -0.4]} fontSize={0.15} color="#c8ff1d" fontWeight="bold">
-        RELLA ALTA DENSITÀ (16)
+        Rella abbigliamento (16 unità)
       </Text>
     </group>
   );

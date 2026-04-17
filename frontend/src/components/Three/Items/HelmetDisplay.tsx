@@ -82,7 +82,7 @@ export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotatio
       })}
 
       <Text position={[0, 3.8, -0.4]} fontSize={0.15} color="#c8ff1d" fontWeight="bold">
-        ESPOSITORE ULTRA DENSITÀ (40)
+        Espositore caschi (40 unità)
       </Text>
     </group>
   );
