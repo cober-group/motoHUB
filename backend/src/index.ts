@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import { OdooService } from './services/odoo';
 import { initDb, pool } from './db';
@@ -14,11 +15,12 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
-app.use(cors({
-  origin: frontendUrl,
-  credentials: true,
-}));
+app.use(compression());
+app.use(cors({ origin: frontendUrl, credentials: true }));
 app.use(express.json());
+
+// location_id cache: storeId → odoo_location_id (never changes at runtime)
+const locationCache = new Map<number, number | null>();
 
 const odoo = new OdooService({
   url: process.env.ODOO_URL || '',
@@ -50,15 +52,17 @@ app.get('/api/odoo/init', authMiddleware, async (req: any, res: any) => {
 app.get('/api/odoo/products', authMiddleware, async (req: any, res: any) => {
   const { category, search, fixture_type, offset, limit } = req.query;
 
-  // Resolve location_id from the user's store if available
   let locationId: number | undefined;
   if (req.user.storeId) {
-    try {
-      const { rows } = await pool.query(
-        `SELECT odoo_location_id FROM stores WHERE id = $1`, [req.user.storeId]
-      );
-      locationId = rows[0]?.odoo_location_id ?? undefined;
-    } catch { /* non bloccante */ }
+    if (!locationCache.has(req.user.storeId)) {
+      try {
+        const { rows } = await pool.query(
+          `SELECT odoo_location_id FROM stores WHERE id = $1`, [req.user.storeId]
+        );
+        locationCache.set(req.user.storeId, rows[0]?.odoo_location_id ?? null);
+      } catch { locationCache.set(req.user.storeId, null); }
+    }
+    locationId = locationCache.get(req.user.storeId) ?? undefined;
   }
 
   try {

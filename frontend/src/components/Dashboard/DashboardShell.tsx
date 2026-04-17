@@ -270,7 +270,6 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
       {/* 3D Scene */}
       {!exiting && (
         <StoreScene
-          key={sqm}
           placedItems={placedItems}
           isEditMode={!visitMode && isInventoryMode && !modalConfig.isOpen}
           isAdmin={canEditLayout}

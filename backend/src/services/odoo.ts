@@ -145,7 +145,7 @@ export class OdooService {
 
     // Pass location context so qty_available reflects per-store stock
     const kwargs: any = {
-      fields: ['name', 'list_price', 'image_1920', 'categ_id', 'qty_available'],
+      fields: ['name', 'list_price', 'image_128', 'categ_id', 'qty_available'],
       limit,
       offset,
     };
