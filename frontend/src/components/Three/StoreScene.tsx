@@ -21,12 +21,13 @@ interface StoreSceneProps {
   onUpdateItem: (id: string, pos: [number, number, number], rot: [number, number, number]) => void;
   onRemoveItem: (id: string) => void;
   onOpenSelector: (itemId: string, shelfIndex: number, type: 'helmet' | 'jacket' | 'central') => void;
+  onOpenBarcodeScanner: (itemId: string, shelfIndex: number, type: 'helmet' | 'jacket' | 'central') => void;
 }
 
-export function StoreScene({ 
-  placedItems, isEditMode, width, depth, 
-  focusedItemId, onFocusItem, 
-  onUpdateItem, onRemoveItem, onOpenSelector 
+export function StoreScene({
+  placedItems, isEditMode, width, depth,
+  focusedItemId, onFocusItem,
+  onUpdateItem, onRemoveItem, onOpenSelector, onOpenBarcodeScanner
 }: StoreSceneProps) {
   const controlsRef = useRef<CameraControls>(null);
 
@@ -151,8 +152,8 @@ export function StoreScene({
 
           return (
             <group key={item.id} onClick={handleFocus}>
-              {item.type === 'helmet' && <HelmetDisplay {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} />}
-              {item.type === 'jacket' && <JacketRail {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} />}
+              {item.type === 'helmet' && <HelmetDisplay {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id, s) => onOpenBarcodeScanner(id, s, 'helmet')} />}
+              {item.type === 'jacket' && <JacketRail {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id, s) => onOpenBarcodeScanner(id, s, 'jacket')} />}
               {item.type === 'central' && <CentralShelf {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} />}
             </group>
           );

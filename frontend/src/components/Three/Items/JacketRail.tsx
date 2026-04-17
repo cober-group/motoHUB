@@ -1,6 +1,15 @@
 import { Text, Image, Html } from '@react-three/drei';
 import { memo } from 'react';
 
+function getVariant(product: any): string {
+  const dn: string = product.display_name || '';
+  const name: string = product.name || '';
+  if (!dn || !name) return '';
+  const rest = dn.slice(name.length).trim();
+  if (rest.startsWith('(') && rest.endsWith(')')) return rest.slice(1, -1);
+  return rest;
+}
+
 interface JacketRailProps {
   id: string;
   position: [number, number, number];
@@ -9,6 +18,7 @@ interface JacketRailProps {
   onUpdate?: (id: string, pos: [number, number, number], rot: [number, number, number]) => void;
   onRemove?: (id: string) => void;
   onOpenSelector?: (itemId: string, shelfIndex: number, type: 'jacket') => void;
+  onOpenBarcodeScanner?: (itemId: string, shelfIndex: number) => void;
   isEditable?: boolean;
 }
 
@@ -17,7 +27,7 @@ const getProductImage = (base64?: string) => {
   return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
 };
 
-export const JacketRail = memo(function JacketRail({ id, position, rotation, assignedProducts, onRemove, onOpenSelector, isEditable }: JacketRailProps) {
+export const JacketRail = memo(function JacketRail({ id, position, rotation, assignedProducts, onRemove, onOpenSelector, onOpenBarcodeScanner, isEditable }: JacketRailProps) {
   return (
     <group position={position} rotation={rotation}>
       {isEditable && (
@@ -50,9 +60,14 @@ export const JacketRail = memo(function JacketRail({ id, position, rotation, ass
                 <group key={slotIndex} position={[offsetX, 0, 0]}>
                   {isEditable && (
                     <Html position={[0, -0.85, 0.2]} center>
-                      <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'jacket'); }} style={{ fontSize: '0.55rem', padding: '2px 6px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>
-                        {assigned ? '🔄' : '+'}
-                      </button>
+                      <div style={{ display: 'flex', gap: '3px', pointerEvents: 'auto' }}>
+                        <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'jacket'); }} style={{ fontSize: '0.55rem', padding: '2px 6px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                          {assigned ? '🔄' : '+'}
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onOpenBarcodeScanner?.(id, slotIndex); }} style={{ fontSize: '0.55rem', padding: '2px 6px', background: '#333', color: '#c8ff1d', border: '1px solid #c8ff1d', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                          🔫
+                        </button>
+                      </div>
                     </Html>
                   )}
                   {assigned ? (
@@ -65,8 +80,9 @@ export const JacketRail = memo(function JacketRail({ id, position, rotation, ass
                           <meshStandardMaterial color="#c8ff1d" />
                         </mesh>
                       )}
-                      <Text position={[0, -0.75, 0.3]} fontSize={0.05} color="#fff" anchorX="center" maxWidth={0.4}>{assigned.name}</Text>
-                      <Text position={[0, -0.85, 0.3]} fontSize={0.04} color="#c8ff1d" anchorX="center">{`€${assigned.list_price}`}</Text>
+                      <Text position={[0, -0.72, 0.3]} fontSize={0.045} color="#fff" anchorX="center" maxWidth={0.45}>{assigned.name}</Text>
+                      {getVariant(assigned) ? <Text position={[0, -0.80, 0.3]} fontSize={0.038} color="#88aaff" anchorX="center" maxWidth={0.45}>{getVariant(assigned)}</Text> : null}
+                      <Text position={[0, -0.89, 0.3]} fontSize={0.042} color="#c8ff1d" anchorX="center">{`€${(assigned.list_price ?? 0).toFixed(2)}`}</Text>
                     </group>
                   ) : (
                     <mesh position={[0, -0.1, 0.05]}>

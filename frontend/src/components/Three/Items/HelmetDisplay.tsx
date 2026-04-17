@@ -1,6 +1,15 @@
 import { Text, Image, Html } from '@react-three/drei';
 import { memo } from 'react';
 
+function getVariant(product: any): string {
+  const dn: string = product.display_name || '';
+  const name: string = product.name || '';
+  if (!dn || !name) return '';
+  const rest = dn.slice(name.length).trim();
+  if (rest.startsWith('(') && rest.endsWith(')')) return rest.slice(1, -1);
+  return rest;
+}
+
 interface HelmetDisplayProps {
   id: string;
   position: [number, number, number];
@@ -9,6 +18,7 @@ interface HelmetDisplayProps {
   onUpdate?: (id: string, pos: [number, number, number], rot: [number, number, number]) => void;
   onRemove?: (id: string) => void;
   onOpenSelector?: (itemId: string, shelfIndex: number, type: 'helmet') => void;
+  onOpenBarcodeScanner?: (itemId: string, shelfIndex: number) => void;
   isEditable?: boolean;
 }
 
@@ -17,7 +27,7 @@ const getProductImage = (base64?: string) => {
   return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
 };
 
-export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotation, assignedProducts, onRemove, onOpenSelector, isEditable }: HelmetDisplayProps) {
+export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotation, assignedProducts, onRemove, onOpenSelector, onOpenBarcodeScanner, isEditable }: HelmetDisplayProps) {
   return (
     <group position={position} rotation={rotation}>
       {isEditable && (
@@ -50,9 +60,14 @@ export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotatio
                 <group key={slotIndex} position={[offsetX, 0, 0]}>
                   {isEditable && (
                     <Html position={[0, 0.06, 0.3]} center>
-                      <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'helmet'); }} style={{ fontSize: '0.45rem', padding: '1px 4px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>
-                        {assigned ? '🔄' : '+'}
-                      </button>
+                      <div style={{ display: 'flex', gap: '2px', pointerEvents: 'auto' }}>
+                        <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'helmet'); }} style={{ fontSize: '0.45rem', padding: '1px 4px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                          {assigned ? '🔄' : '+'}
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onOpenBarcodeScanner?.(id, slotIndex); }} style={{ fontSize: '0.45rem', padding: '1px 4px', background: '#333', color: '#c8ff1d', border: '1px solid #c8ff1d', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                          🔫
+                        </button>
+                      </div>
                     </Html>
                   )}
                   {assigned ? (
@@ -65,8 +80,9 @@ export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotatio
                           <meshStandardMaterial color="#c8ff1d" roughness={0.1} metalness={0.8} />
                         </mesh>
                       )}
-                      <Text position={[0, -0.05, 0.35]} fontSize={0.035} color="#fff" anchorX="center" maxWidth={0.4}>{assigned.name}</Text>
-                      <Text position={[0, -0.1, 0.35]} fontSize={0.03} color="#c8ff1d" anchorX="center">{`€${assigned.list_price}`}</Text>
+                      <Text position={[0, -0.03, 0.35]} fontSize={0.028} color="#fff" anchorX="center" maxWidth={0.4}>{assigned.name}</Text>
+                      {getVariant(assigned) ? <Text position={[0, -0.075, 0.35]} fontSize={0.024} color="#88aaff" anchorX="center" maxWidth={0.4}>{getVariant(assigned)}</Text> : null}
+                      <Text position={[0, -0.115, 0.35]} fontSize={0.028} color="#c8ff1d" anchorX="center">{`€${(assigned.list_price ?? 0).toFixed(2)}`}</Text>
                     </group>
                   ) : (
                     <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>

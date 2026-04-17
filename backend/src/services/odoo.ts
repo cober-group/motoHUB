@@ -146,7 +146,7 @@ export class OdooService {
 
     // Pass location context so qty_available reflects per-store stock
     const kwargs: any = {
-      fields: ['name', 'list_price', 'image_128', 'categ_id', 'qty_available'],
+      fields: ['name', 'display_name', 'list_price', 'image_128', 'categ_id', 'qty_available'],
       limit,
       offset,
     };
@@ -159,6 +159,20 @@ export class OdooService {
     }
 
     return this.execute('product.product', 'search_read', [domain], kwargs);
+  }
+
+  async getProductByBarcode(barcode: string, locationId?: number) {
+    const domain: any[] = [
+      ['sale_ok', '=', true],
+      ['barcode', '=', barcode],
+    ];
+    const kwargs: any = {
+      fields: ['name', 'display_name', 'list_price', 'image_128', 'categ_id', 'qty_available', 'barcode'],
+      limit: 1,
+    };
+    if (locationId) kwargs.context = { location: locationId };
+    const results = await this.execute('product.product', 'search_read', [domain], kwargs);
+    return results[0] || null;
   }
 
   async getCategories() {

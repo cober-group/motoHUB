@@ -80,6 +80,31 @@ app.get('/api/odoo/products', authMiddleware, async (req: any, res: any) => {
   }
 });
 
+// ── Odoo: product by barcode ─────────────────────────────────────────
+app.get('/api/odoo/barcode', authMiddleware, async (req: any, res: any) => {
+  const { barcode } = req.query;
+  if (!barcode) return res.status(400).json({ error: 'Barcode mancante' });
+
+  let locationId: number | undefined;
+  if (req.user.storeId) {
+    if (!locationCache.has(req.user.storeId)) {
+      try {
+        const { rows } = await pool.query(`SELECT odoo_location_id FROM stores WHERE id = $1`, [req.user.storeId]);
+        locationCache.set(req.user.storeId, rows[0]?.odoo_location_id ?? null);
+      } catch { locationCache.set(req.user.storeId, null); }
+    }
+    locationId = locationCache.get(req.user.storeId) ?? undefined;
+  }
+
+  try {
+    const product = await odoo.getProductByBarcode(barcode as string, locationId);
+    if (!product) return res.status(404).json({ error: 'Prodotto non trovato' });
+    res.json({ product });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Odoo: locations (per admin — mostra le location Odoo disponibili) ──
 app.get('/api/odoo/locations', authMiddleware, async (req: any, res: any) => {
   try {

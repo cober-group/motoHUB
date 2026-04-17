@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { StoreScene } from '@/components/Three/StoreScene';
 import { ProductModal } from '@/components/UI/ProductModal';
+import { BarcodeModal } from '@/components/UI/BarcodeModal';
 import { useAuth, useApiFetch } from '@/context/AuthContext';
 import { PlacedItem } from '@/types/store';
 
@@ -38,6 +39,23 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [layoutLoading, setLayoutLoading] = useState(true);
+
+  // Barcode modal
+  const [barcodeConfig, setBarcodeConfig] = useState<{
+    isOpen: boolean; itemId: string; shelfIndex: number; type: 'helmet' | 'jacket' | 'central';
+  }>({ isOpen: false, itemId: '', shelfIndex: 0, type: 'helmet' });
+
+  const fetchProductByBarcode = useCallback(async (barcode: string) => {
+    const res = await apiFetch(`/api/odoo/barcode?barcode=${encodeURIComponent(barcode)}`);
+    if (res.status === 404) return null;
+    const data = await res.json();
+    return data.product ?? null;
+  }, [apiFetch]);
+
+  const handleOpenBarcodeScanner = (itemId: string, shelfIndex: number, type: 'helmet' | 'jacket' | 'central') => {
+    if (visitMode) return;
+    setBarcodeConfig({ isOpen: true, itemId, shelfIndex, type });
+  };
 
   // Product modal
   const [modalConfig, setModalConfig] = useState<{
@@ -272,9 +290,18 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
             onUpdateItem={updateItem}
             onRemoveItem={removeItem}
             onOpenSelector={handleOpenSelector}
+            onOpenBarcodeScanner={handleOpenBarcodeScanner}
           />
         )}
       </div>
+
+      {/* Barcode Modal */}
+      <BarcodeModal
+        isOpen={barcodeConfig.isOpen}
+        onClose={() => setBarcodeConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={(product) => assignProduct(barcodeConfig.itemId, barcodeConfig.shelfIndex, product)}
+        fetchProductByBarcode={fetchProductByBarcode}
+      />
 
       {/* Product Modal */}
       <ProductModal
