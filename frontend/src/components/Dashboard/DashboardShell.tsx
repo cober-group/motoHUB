@@ -165,7 +165,7 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
 
   const handleExit = () => {
     setExiting(true);
-    if (visitMode && onExitVisit) { onExitVisit(); return; }
+    if (onExitVisit) { onExitVisit(); return; }
     logout();
     router.replace('/login');
   };
@@ -187,101 +187,94 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
   const isOverflowing = wallItems > maxSlots;
 
   return (
-    <main style={{ width: '100vw', height: '100vh', background: '#1d1d1d', overflow: 'hidden', position: 'relative' }}>
+    <main style={{ width: '100vw', height: '100vh', background: '#1d1d1d', overflow: 'hidden', display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* Visit mode banner */}
-      {visitMode && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10001, background: 'rgba(100,160,255,0.15)', borderBottom: '1px solid rgba(100,160,255,0.3)', padding: '10px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: '#64a0ff', fontWeight: 'bold', fontSize: '0.85rem' }}>👁 MODALITÀ VISITA — {storeName}</span>
-          <button onClick={handleExit} style={{ padding: '6px 16px', background: '#64a0ff', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' }}>← TORNA ALLA CONSOLE</button>
-        </div>
-      )}
+      {/* ── Sidebar ── */}
+      <div style={{ width: '380px', minWidth: '380px', height: '100vh', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', padding: '30px 24px', gap: '24px', zIndex: 10, background: '#1d1d1d', overflow: 'hidden' }}>
 
-      {/* Sidebar */}
-      <div style={{
-        position: 'absolute', top: visitMode ? 48 : 20, left: 20, bottom: 20, width: '340px',
-        zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '20px', padding: '30px',
-        borderRadius: '24px', background: 'rgba(29,29,29,0.96)',
-        border: `2px solid ${visitMode ? 'rgba(100,160,255,0.3)' : 'rgba(200,255,29,0.3)'}`,
-        boxShadow: '0 10px 40px rgba(0,0,0,0.8)',
-      }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
           <div>
-            <h1 style={{ margin: 0, color: '#c8ff1d', fontSize: '2rem', fontWeight: 900, letterSpacing: '2px' }}>MOTOHUB</h1>
-            <p style={{ margin: '2px 0 0', color: '#555', fontSize: '0.75rem', fontWeight: 'bold' }}>
-              {visitMode ? `VISITA: ${storeName}` : isAdmin ? 'ADMIN CONSOLE' : 'SHOP EXPERIENCE'}
+            <h1 style={{ margin: 0, color: '#c8ff1d', fontSize: '1.8rem', fontWeight: 900, letterSpacing: '3px' }}>MOTOHUB</h1>
+            <p style={{ margin: '4px 0 0', color: '#555', fontSize: '0.75rem', letterSpacing: '1px' }}>
+              {visitMode ? 'VISITA NEGOZIO' : isAdmin ? 'ADMIN CONSOLE' : 'SHOP EXPERIENCE'}
             </p>
           </div>
-          {!visitMode && (
-            <button onClick={handleExit} style={{ padding: '10px 18px', background: '#ff1d1d', border: 'none', borderRadius: '10px', cursor: 'pointer', color: '#fff', fontSize: '0.75rem', fontWeight: 'bold' }}>
-              {isAdmin ? '← ADMIN' : 'LOGOUT'}
-            </button>
-          )}
+          <button onClick={handleExit} style={{ padding: '10px 16px', background: isAdmin && onExitVisit ? 'rgba(200,255,29,0.1)' : 'rgba(255,68,68,0.1)', color: isAdmin && onExitVisit ? '#c8ff1d' : '#ff6666', border: `1px solid ${isAdmin && onExitVisit ? 'rgba(200,255,29,0.2)' : 'rgba(255,68,68,0.2)'}`, borderRadius: '10px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+            {isAdmin && onExitVisit ? '← ADMIN' : 'LOGOUT'}
+          </button>
         </div>
 
-        {/* Store info */}
-        <div style={{ padding: '16px', background: 'rgba(200,255,29,0.05)', border: '1px solid rgba(200,255,29,0.15)', borderRadius: '14px' }}>
-          <h2 style={{ margin: '0 0 4px', color: '#fff', fontSize: '0.95rem', fontWeight: 'bold' }}>{storeName || `Store #${resolvedStoreId}`}</h2>
-          <p style={{ margin: 0, color: '#c8ff1d', fontSize: '0.7rem', fontWeight: 'bold' }}>📡 Odoo 18 Connected</p>
+        {/* Store info card */}
+        <div style={{ padding: '16px 18px', background: 'rgba(200,255,29,0.05)', border: '1px solid rgba(200,255,29,0.12)', borderRadius: '12px', flexShrink: 0 }}>
+          <p style={{ margin: '0 0 2px', color: '#fff', fontSize: '0.95rem', fontWeight: 'bold' }}>{storeName || `Store #${resolvedStoreId}`}</p>
+          <p style={{ margin: 0, color: '#c8ff1d', fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>📡 Odoo 18 Connected</p>
         </div>
 
-        {/* Dimensions (admin only, not in visit mode) */}
+        {/* Visit mode badge */}
+        {visitMode && (
+          <div style={{ padding: '10px 14px', background: 'rgba(100,160,255,0.08)', border: '1px solid rgba(100,160,255,0.2)', borderRadius: '10px', flexShrink: 0 }}>
+            <p style={{ margin: 0, color: '#64a0ff', fontSize: '0.75rem', fontWeight: 'bold' }}>👁 MODALITÀ SOLA LETTURA</p>
+          </div>
+        )}
+
+        {/* Dimensions */}
         {canEditDimensions && (
-          <div style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ padding: '18px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c8ff1d', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px' }}>
               <span>Dimensioni Negozio</span><span>{sqm} m²</span>
             </div>
             <input type="range" min="50" max="1000" step="10" value={sqm} onChange={e => handleSqmChange(parseInt(e.target.value))} style={{ width: '100%', cursor: 'pointer', accentColor: '#c8ff1d' }} />
-            <div style={{ marginTop: '12px', padding: '10px', background: isOverflowing ? 'rgba(255,68,68,0.15)' : 'rgba(200,255,29,0.05)', borderRadius: '10px', border: `1px solid ${isOverflowing ? '#ff4444' : 'rgba(200,255,29,0.2)'}` }}>
+            <div style={{ marginTop: '10px', padding: '8px 12px', background: isOverflowing ? 'rgba(255,68,68,0.1)' : 'rgba(200,255,29,0.04)', borderRadius: '8px', border: `1px solid ${isOverflowing ? 'rgba(255,68,68,0.3)' : 'rgba(200,255,29,0.15)'}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: isOverflowing ? '#ff6666' : '#c8ff1d', fontWeight: 'bold' }}>
-                <span>Arredi a Parete:</span><span>{wallItems} / {maxSlots}</span>
+                <span>Arredi a Parete</span><span>{wallItems} / {maxSlots}</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Furniture buttons (admin + store, not in visit mode) */}
+        {/* Furniture buttons */}
         {canEditLayout && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }} className="custom-scroller">
-            <p style={{ color: '#555', fontSize: '0.7rem', fontWeight: 'bold', margin: 0 }}>ELEMENTI ARREDO</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', minHeight: 0 }} className="custom-scroller">
+            <p style={{ color: '#555', fontSize: '0.7rem', fontWeight: 'bold', margin: '0 0 4px', letterSpacing: '1px' }}>ELEMENTI ARREDO</p>
             <button onClick={() => addItem('helmet')} className="boost-btn-brute">+ Espositore Caschi</button>
             <button onClick={() => addItem('jacket')} className="boost-btn-brute">+ Rella Giacche</button>
             <button onClick={() => addItem('central')} className="boost-btn-brute">+ Isola Centrale</button>
           </div>
         )}
 
+        {/* Gestione button (inventory toggle) */}
         {canEditLayout && (
-          <button onClick={clearStore} style={{ padding: '12px', background: 'rgba(255,68,68,0.1)', color: '#ff6666', border: '1px solid rgba(255,68,68,0.2)', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' }}>
+          <button onClick={() => setIsInventoryMode(!isInventoryMode)} style={{ padding: '12px', background: isInventoryMode ? 'rgba(200,255,29,0.12)' : 'rgba(255,255,255,0.03)', color: isInventoryMode ? '#c8ff1d' : '#888', border: `1px solid ${isInventoryMode ? 'rgba(200,255,29,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem', flexShrink: 0 }}>
+            {isInventoryMode ? '📦 GESTIONE ATTIVA' : '📦 ATTIVA GESTIONE'}
+          </button>
+        )}
+
+        {/* Clear store */}
+        {canEditLayout && (
+          <button onClick={clearStore} style={{ padding: '12px', background: 'rgba(255,68,68,0.08)', color: '#ff6666', border: '1px solid rgba(255,68,68,0.15)', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem', flexShrink: 0 }}>
             🗑️ SVUOTA NEGOZIO
           </button>
         )}
       </div>
 
-      {/* Top-right controls */}
-      {!visitMode && (
-        <div style={{ position: 'absolute', top: 25, right: 25, zIndex: 100, display: 'flex', gap: '12px' }}>
-          <button onClick={() => setIsInventoryMode(!isInventoryMode)} style={{ padding: '12px 22px', background: isInventoryMode ? '#c8ff1d' : '#222', color: isInventoryMode ? '#000' : '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', boxShadow: isInventoryMode ? '0 0 20px rgba(200,255,29,0.4)' : 'none' }}>
-            {isInventoryMode ? '📦 GESTIONE ON' : '📦 GESTIONE'}
-          </button>
-        </div>
-      )}
-
-      {/* 3D Scene */}
-      {!exiting && (
-        <StoreScene
-          placedItems={placedItems}
-          isEditMode={!visitMode && isInventoryMode && !modalConfig.isOpen}
-          isAdmin={canEditLayout}
-          width={dimensions.width}
-          depth={dimensions.length}
-          focusedItemId={focusedItemId}
-          onFocusItem={setFocusedItemId}
-          onUpdateItem={updateItem}
-          onRemoveItem={removeItem}
-          onOpenSelector={handleOpenSelector}
-        />
-      )}
+      {/* ── 3D Scene (fills remaining space) ── */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        {!exiting && (
+          <StoreScene
+            placedItems={placedItems}
+            isEditMode={!visitMode && isInventoryMode && !modalConfig.isOpen}
+            isAdmin={canEditLayout}
+            width={dimensions.width}
+            depth={dimensions.length}
+            focusedItemId={focusedItemId}
+            onFocusItem={setFocusedItemId}
+            onUpdateItem={updateItem}
+            onRemoveItem={removeItem}
+            onOpenSelector={handleOpenSelector}
+          />
+        )}
+      </div>
 
       {/* Product Modal */}
       <ProductModal
