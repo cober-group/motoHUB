@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 
 const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '');
 
@@ -89,7 +89,7 @@ export function useAuth() {
 // Typed fetch helper — attaches JWT automatically
 export function useApiFetch() {
   const { token, logout } = useAuth();
-  return async function apiFetch(path: string, init: RequestInit = {}) {
+  return useCallback(async function apiFetch(path: string, init: RequestInit = {}) {
     const res = await fetch(`${API}${path}`, {
       ...init,
       headers: {
@@ -100,5 +100,5 @@ export function useApiFetch() {
     });
     if (res.status === 401) { logout(); throw new Error('Sessione scaduta'); }
     return res;
-  };
+  }, [token, logout]);
 }

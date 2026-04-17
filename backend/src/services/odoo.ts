@@ -33,6 +33,7 @@ export class OdooService {
     if (this.authPromise) return this.authPromise;
 
     this.authPromise = (async () => {
+      if (!this.config.url) throw new Error('ODOO_URL non configurato');
       const url = new URL(this.config.url);
       const subdomain = url.hostname.split('.')[0];
       const variants = [

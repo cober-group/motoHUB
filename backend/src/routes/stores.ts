@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { pool } from '../db';
 import { authMiddleware, adminOnly } from '../middleware/auth';
+import { locationCache } from '../cache';
 
 const router = Router();
 router.use(authMiddleware);
@@ -53,6 +54,8 @@ router.patch('/:id', adminOnly, async (req: any, res: any) => {
       [name, sqm, odoo_location_id, req.params.id]
     );
     if (!rows[0]) return res.status(404).json({ error: 'Negozio non trovato' });
+    // Invalida la cache location_id se il magazzino Odoo è cambiato
+    locationCache.delete(parseInt(req.params.id));
     res.json(rows[0]);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

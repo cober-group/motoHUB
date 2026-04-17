@@ -19,8 +19,7 @@ app.use(compression());
 app.use(cors({ origin: frontendUrl, credentials: true }));
 app.use(express.json());
 
-// location_id cache: storeId → odoo_location_id (never changes at runtime)
-const locationCache = new Map<number, number | null>();
+import { locationCache } from './cache';
 
 const odoo = new OdooService({
   url: process.env.ODOO_URL || '',
@@ -66,12 +65,13 @@ app.get('/api/odoo/products', authMiddleware, async (req: any, res: any) => {
   }
 
   try {
+    const parsedCategory = parseInt(category as string);
     const products = await odoo.getProducts(
       search as string,
-      category ? parseInt(category as string) : undefined,
+      !isNaN(parsedCategory) ? parsedCategory : undefined,
       fixture_type as string | undefined,
-      offset ? parseInt(offset as string) : 0,
-      limit ? parseInt(limit as string) : 20,
+      Math.max(0, parseInt(offset as string) || 0),
+      Math.min(100, parseInt(limit as string) || 20),
       locationId
     );
     res.json({ products });

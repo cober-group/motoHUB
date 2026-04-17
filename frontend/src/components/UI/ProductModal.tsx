@@ -117,7 +117,7 @@ export function ProductModal({ isOpen, onClose, title, products, hasMore, onLoad
                     {p.qty_available} DISPONIBILI
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#ffcc00', fontWeight: 'bold', fontSize: '1rem' }}>€{p.list_price.toFixed(2)}</span>
+                    <span style={{ color: '#ffcc00', fontWeight: 'bold', fontSize: '1rem' }}>€{(p.list_price ?? 0).toFixed(2)}</span>
                     <span style={{ fontSize: '0.7rem', color: '#666' }}>ID: {p.id}</span>
                   </div>
                 </div>
