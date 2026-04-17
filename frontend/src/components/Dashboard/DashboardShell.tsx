@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { StoreScene } from '@/components/Three/StoreScene';
 import { ProductModal } from '@/components/UI/ProductModal';
@@ -38,7 +38,23 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
   const [sqm, setSqm] = useState(initialSqm ?? 150);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
+  const [focusedProductIndex, setFocusedProductIndex] = useState<number | null>(null);
   const [layoutLoading, setLayoutLoading] = useState(true);
+
+  const exposedProducts = useMemo(() => {
+    const list: any[] = [];
+    placedItems.forEach(item => {
+      Object.entries(item.assignedProducts || {}).forEach(([slotIndex, product]) => {
+        list.push({
+          itemId: item.id,
+          slotIndex: parseInt(slotIndex),
+          product,
+          type: item.type
+        });
+      });
+    });
+    return list;
+  }, [placedItems]);
 
   // Barcode modal
   const [barcodeItemId, setBarcodeItemId] = useState<string | null>(null);
@@ -130,7 +146,7 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
     if (!barcodeItemId) return false;
     const item = placedItems.find(i => i.id === barcodeItemId);
     if (!item) return false;
-    const maxSlots = item.type === 'helmet' ? 40 : item.type === 'jacket' ? 16 : 9;
+    const maxSlots = item.type === 'helmet' ? 40 : item.type === 'jacket' ? 16 : 6;
     const assigned = item.assignedProducts || {};
     for (let i = 0; i < maxSlots; i++) {
       if (!assigned[i]) { assignProduct(barcodeItemId, i, product); return true; }
@@ -191,6 +207,39 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
+  const nextProduct = useCallback(() => {
+    if (focusedProductIndex === null || exposedProducts.length === 0) return;
+    setFocusedProductIndex((focusedProductIndex + 1) % exposedProducts.length);
+  }, [focusedProductIndex, exposedProducts.length]);
+
+  const prevProduct = useCallback(() => {
+    if (focusedProductIndex === null || exposedProducts.length === 0) return;
+    setFocusedProductIndex((focusedProductIndex - 1 + exposedProducts.length) % exposedProducts.length);
+  }, [focusedProductIndex, exposedProducts.length]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (focusedProductIndex === null) return;
+      if (e.key === 'ArrowRight') nextProduct();
+      if (e.key === 'ArrowLeft') prevProduct();
+      if (e.key === 'Escape') {
+        setFocusedProductIndex(null);
+        setFocusedItemId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [focusedProductIndex, nextProduct, prevProduct]);
+
+  const handleProductFocus = (itemId: string, slotIndex: number) => {
+    const idx = exposedProducts.findIndex(p => p.itemId === itemId && p.slotIndex === slotIndex);
+    if (idx !== -1) {
+      setFocusedProductIndex(idx);
+      setFocusedItemId(itemId);
+    }
+  };
+
   const handleExit = () => {
     setExiting(true);
     if (onExitVisit) { onExitVisit(); return; }
@@ -210,9 +259,28 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
   const availZ = (dimensions.length * 2) - 2 * cornerMargin;
   const sX = Math.max(1, Math.floor((availX - bodyW) / wallLen) + 1);
   const sZ = Math.max(1, Math.floor((availZ - bodyW) / wallLen) + 1);
-  const maxSlots = (sX * 2) + (sZ * 2);
+  const maxFurnitureSlots = (sX * 2) + (sZ * 2);
   const wallItems = placedItems.filter(i => i.type === 'helmet' || i.type === 'jacket').length;
-  const isOverflowing = wallItems > maxSlots;
+  const isFurnitureOverflowing = wallItems >= maxFurnitureSlots;
+
+  // Chart Helper
+  const renderSparkline = (id: string) => {
+    // Generate deterministic random-ish path based on id
+    const points = [];
+    let seed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    for (let i = 0; i < 7; i++) {
+      seed = (seed * 9301 + 49297) % 233280;
+      points.push(seed / 233280);
+    }
+    const path = points.map((p, i) => `${i * 15},${30 - p * 25}`).join(' L ');
+    return (
+      <svg width="105" height="35" viewBox="0 0 90 30" style={{ filter: 'drop-shadow(0 0 4px #c8ff1d)' }}>
+        <path d={`M 0,${30 - points[0] * 25} L ${path}`} fill="none" stroke="#c8ff1d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  };
+
+  const currentFocusedProduct = focusedProductIndex !== null ? exposedProducts[focusedProductIndex] : null;
 
   return (
     <main style={{ width: '100vw', height: '100vh', background: '#1d1d1d', overflow: 'hidden', display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -253,9 +321,9 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
               <span>Dimensioni Negozio</span><span>{sqm} m²</span>
             </div>
             <input type="range" min="50" max="1000" step="10" value={sqm} onChange={e => handleSqmChange(parseInt(e.target.value))} style={{ width: '100%', cursor: 'pointer', accentColor: '#c8ff1d' }} />
-            <div style={{ marginTop: '10px', padding: '8px 12px', background: isOverflowing ? 'rgba(255,68,68,0.1)' : 'rgba(200,255,29,0.04)', borderRadius: '8px', border: `1px solid ${isOverflowing ? 'rgba(255,68,68,0.3)' : 'rgba(200,255,29,0.15)'}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: isOverflowing ? '#ff6666' : '#c8ff1d', fontWeight: 'bold' }}>
-                <span>Arredi a Parete</span><span>{wallItems} / {maxSlots}</span>
+            <div style={{ marginTop: '10px', padding: '8px 12px', background: isFurnitureOverflowing ? 'rgba(255,68,68,0.1)' : 'rgba(200,255,29,0.04)', borderRadius: '8px', border: `1px solid ${isFurnitureOverflowing ? 'rgba(255,68,68,0.3)' : 'rgba(200,255,29,0.15)'}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: isFurnitureOverflowing ? '#ff6666' : '#c8ff1d', fontWeight: 'bold' }}>
+                <span>Arredi a Parete</span><span>{wallItems} / {maxFurnitureSlots}</span>
               </div>
             </div>
           </div>
@@ -265,8 +333,8 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
         {canEditLayout && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', minHeight: 0 }} className="custom-scroller">
             <p style={{ color: '#555', fontSize: '0.7rem', fontWeight: 'bold', margin: '0 0 4px', letterSpacing: '1px' }}>ELEMENTI ARREDO</p>
-            <button onClick={() => addItem('helmet')} className="boost-btn-brute">+ Espositore Caschi</button>
-            <button onClick={() => addItem('jacket')} className="boost-btn-brute">+ Rella Giacche</button>
+            <button onClick={() => addItem('helmet')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Espositore Caschi</button>
+            <button onClick={() => addItem('jacket')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Rella Giacche</button>
             <button onClick={() => addItem('central')} className="boost-btn-brute">+ Isola Centrale</button>
           </div>
         )}
@@ -296,12 +364,77 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
             width={dimensions.width}
             depth={dimensions.length}
             focusedItemId={focusedItemId}
-            onFocusItem={setFocusedItemId}
+            focusedProductIndex={focusedProductIndex}
+            exposedProducts={exposedProducts}
+            onFocusItem={(id) => { setFocusedItemId(id); setFocusedProductIndex(null); }}
+            onFocusProduct={handleProductFocus}
             onUpdateItem={updateItem}
             onRemoveItem={removeItem}
             onOpenSelector={handleOpenSelector}
             onOpenBarcodeScanner={handleOpenBarcodeScanner}
           />
+        )}
+
+        {/* --- Product Gallery UI --- */}
+        {currentFocusedProduct && (
+          <>
+            {/* Arrows */}
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', zIndex: 100 }}>
+              <button 
+                onClick={(e) => { e.stopPropagation(); prevProduct(); }} 
+                className="gal-nav-btn"
+                style={{ pointerEvents: 'auto' }}
+              >
+                ←
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); nextProduct(); }} 
+                className="gal-nav-btn"
+                style={{ pointerEvents: 'auto' }}
+              >
+                →
+              </button>
+            </div>
+
+            {/* Close Button Top Right */}
+            <button 
+              onClick={() => { setFocusedProductIndex(null); setFocusedItemId(null); }}
+              style={{ position: 'absolute', top: '30px', left: '30px', width: '50px', height: '50px', background: 'rgba(0,0,0,0.5)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '25px', cursor: 'pointer', zIndex: 110, fontSize: '1.2rem', backdropFilter: 'blur(10px)' }}
+            >
+              ✕
+            </button>
+
+            {/* Analytics Card */}
+            <div style={{ position: 'absolute', top: '30px', right: '30px', width: '320px', background: 'rgba(26,26,26,0.85)', backdropFilter: 'blur(20px)', border: '1px solid rgba(200,255,29,0.2)', borderRadius: '24px', padding: '24px', zIndex: 120, boxShadow: '0 20px 40px rgba(0,0,0,0.4)', color: '#fff', pointerEvents: 'none' }}>
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
+                <div style={{ width: '80px', height: '80px', background: '#111', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {currentFocusedProduct.product.image_128 ? <img src={currentFocusedProduct.product.image_128.startsWith('data') ? currentFocusedProduct.product.image_128 : `data:image/png;base64,${currentFocusedProduct.product.image_128}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : '📦'}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>{currentFocusedProduct.product.name}</h3>
+                  <p style={{ margin: '4px 0', color: '#c8ff1d', fontWeight: 700 }}>€{(currentFocusedProduct.product.list_price ?? 0).toFixed(2)}</p>
+                  <span style={{ fontSize: '0.65rem', color: '#555', letterSpacing: '1px' }}>ID: {currentFocusedProduct.product.default_code || 'N/A'}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <p style={{ margin: 0, color: '#888', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '1px' }}>PEZZI VENDUTI</p>
+                  <p style={{ margin: 0, fontSize: '2rem', fontWeight: 900, color: '#fff' }}>{currentFocusedProduct.product.sales_count || 0}</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ margin: '0 0 6px', color: '#c8ff1d', fontSize: '0.65rem', fontWeight: 800 }}>TREND 7gg</p>
+                  {renderSparkline(currentFocusedProduct.product.id?.toString() || '0')}
+                </div>
+              </div>
+              
+              <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(200,255,29,0.06)', borderRadius: '12px', border: '1px solid rgba(200,255,29,0.1)' }}>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#c8ff1d', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '1.2rem' }}>📈</span> Suggerimento: Performance sopra la media
+                </p>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -330,9 +463,12 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
 
       <style>{`
         .boost-btn-brute { padding: 12px 16px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); text-align: left; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem; transition: transform 0.2s; width: 100%; }
-        .boost-btn-brute:hover { background: rgba(200,255,29,0.1); border-color: #c8ff1d; transform: translateX(4px); }
+        .boost-btn-brute:hover:not(:disabled) { background: rgba(200,255,29,0.1); border-color: #c8ff1d; transform: translateX(4px); }
         .custom-scroller::-webkit-scrollbar { width: 4px; }
         .custom-scroller::-webkit-scrollbar-thumb { background: #c8ff1d; border-radius: 2px; }
+        .gal-nav-btn { width: 60px; height: 60px; background: rgba(200,255,29,0.9); color: #000; border: none; borderRadius: 30px; cursor: pointer; font-size: 1.5rem; font-weight: 900; box-shadow: 0 10px 30px rgba(200,255,29,0.4); transition: transform 0.2s, background 0.2s; }
+        .gal-nav-btn:hover { transform: scale(1.1); background: #fff; }
+        .gal-nav-btn:active { transform: scale(0.95); }
       `}</style>
     </main>
   );

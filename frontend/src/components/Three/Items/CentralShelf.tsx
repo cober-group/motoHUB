@@ -13,6 +13,7 @@ interface CentralShelfProps {
   onOpenSelector?: (itemId: string, shelfIndex: number, type: 'central') => void;
   isEditable?: boolean;
   isFocused?: boolean;
+  onFocusProduct?: (itemId: string, slotIndex: number) => void;
 }
 
 const getProductImage = (base64?: string) => {
@@ -20,7 +21,11 @@ const getProductImage = (base64?: string) => {
   return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
 };
 
-export const CentralShelf = memo(function CentralShelf({ id, position, rotation, assignedProducts, onUpdate, onRemove, onOpenSelector, isEditable, isFocused }: CentralShelfProps) {
+export const CentralShelf = memo(function CentralShelf({ 
+  id, position, rotation, assignedProducts, 
+  onUpdate, onRemove, onOpenSelector, 
+  isEditable, isFocused, onFocusProduct 
+}: CentralShelfProps) {
   return (
     <group position={position} rotation={rotation}>
       {isEditable && isFocused && (
@@ -54,8 +59,16 @@ export const CentralShelf = memo(function CentralShelf({ id, position, rotation,
             {[0, 1, 2].map((t) => {
               const shelfIndex = sideIdx * 3 + t;
               const assigned = assignedProducts[shelfIndex];
+              const isAssigned = !!assigned;
+
+              const handleSlotClick = (e: any) => {
+                if (!isAssigned) return;
+                e.stopPropagation();
+                onFocusProduct?.(id, shelfIndex);
+              };
+
               return (
-                <group key={t} position={[0, 0.4 + t * 0.6, 0]}>
+                <group key={t} position={[0, 0.4 + t * 0.6, 0]} onClick={handleSlotClick}>
                   <mesh castShadow receiveShadow>
                     <boxGeometry args={[2.8, 0.05, 0.4]} />
                     <meshStandardMaterial color="#444" />

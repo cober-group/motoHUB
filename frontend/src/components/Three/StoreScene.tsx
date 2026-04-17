@@ -17,7 +17,10 @@ interface StoreSceneProps {
   width: number;
   depth: number;
   focusedItemId: string | null;
+  focusedProductIndex: number | null;
+  exposedProducts: any[];
   onFocusItem: (id: string | null) => void;
+  onFocusProduct: (itemId: string, slotIndex: number) => void;
   onUpdateItem: (id: string, pos: [number, number, number], rot: [number, number, number]) => void;
   onRemoveItem: (id: string) => void;
   onOpenSelector: (itemId: string, shelfIndex: number, type: 'helmet' | 'jacket' | 'central') => void;
@@ -26,7 +29,8 @@ interface StoreSceneProps {
 
 export function StoreScene({
   placedItems, isEditMode, width, depth,
-  focusedItemId, onFocusItem,
+  focusedItemId, focusedProductIndex, exposedProducts,
+  onFocusItem, onFocusProduct,
   onUpdateItem, onRemoveItem, onOpenSelector, onOpenBarcodeScanner
 }: StoreSceneProps) {
   const controlsRef = useRef<CameraControls>(null);
@@ -86,14 +90,55 @@ export function StoreScene({
     return { position: finalPos, rotation: finalRot, isHidden: false };
   };
 
+  const getLocalSlotPos = (type: string, slotIndex: number): [number, number, number] => {
+    if (type === 'helmet') {
+      const s = Math.floor(slotIndex / 5);
+      const idx = slotIndex % 5;
+      const shelfOffsets = [-1.1, -0.55, 0, 0.55, 1.1];
+      return [shelfOffsets[idx], 0.3 + s * 0.42, 0];
+    }
+    if (type === 'jacket') {
+      const r = Math.floor(slotIndex / 8);
+      const idx = slotIndex % 8;
+      const slotOffsets = [-1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75];
+      return [slotOffsets[idx], 0.8 + r * 1.5, 0];
+    }
+    if (type === 'central') {
+      const side = Math.floor(slotIndex / 6) === 0 ? -1 : 1;
+      const t = slotIndex % 6;
+      return [0, 0.4 + t * 0.6, side * 0.3];
+    }
+    return [0, 0, 0];
+  };
+
   // Transition Logic (Refined with deterministic sync)
   useEffect(() => {
     if (!controlsRef.current) return;
 
-    if (focusedItemId) {
+    if (focusedProductIndex !== null) {
+      const selection = exposedProducts[focusedProductIndex];
+      const placement = getItemPlacement(selection.itemId);
+      if (placement) {
+        const localSlot = getLocalSlotPos(selection.type, selection.slotIndex);
+        const worldPos = new THREE.Vector3(...localSlot)
+          .applyEuler(new THREE.Euler(...placement.rotation))
+          .add(new THREE.Vector3(...placement.position));
+
+        const rotY = placement.rotation[1];
+        const distance = 2.5;
+        const dx = Math.sin(rotY) * distance;
+        const dz = Math.cos(rotY) * distance;
+
+        controlsRef.current.setLookAt(
+          worldPos.x + dx, worldPos.y + 0.3, worldPos.z + dz,
+          worldPos.x, worldPos.y, worldPos.z,
+          true
+        );
+      }
+    } else if (focusedItemId) {
       const placement = getItemPlacement(focusedItemId);
       if (placement && !placement.isHidden) {
-        const distance = 6.5; 
+        const distance = 8.0; 
         const rotY = placement.rotation[1];
         
         const dx = Math.sin(rotY) * distance;
@@ -102,7 +147,7 @@ export function StoreScene({
         const targetPos = new THREE.Vector3(...placement.position);
         const cameraPos = new THREE.Vector3(
           placement.position[0] + dx,
-          2.5,
+          3.5,
           placement.position[2] + dz
         );
 
@@ -115,7 +160,7 @@ export function StoreScene({
     } else {
       controlsRef.current.setLookAt(15, 15, 15, 0, 0, 0, true);
     }
-  }, [focusedItemId, width, depth]); // Added width/depth to sync camera on resize
+  }, [focusedItemId, focusedProductIndex, width, depth]); 
 
   return (
     <Canvas shadows camera={{ position: [15, 15, 15], fov: 50 }}>
@@ -148,15 +193,16 @@ export function StoreScene({
           };
 
           const handleFocus = (e: any) => {
+            if (focusedProductIndex !== null) return; // Ignore furniture click if inside product gallery
             e.stopPropagation();
             onFocusItem(item.id);
           };
 
           return (
             <group key={item.id} onClick={handleFocus}>
-              {item.type === 'helmet' && <HelmetDisplay {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
-              {item.type === 'jacket' && <JacketRail {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
-              {item.type === 'central' && <CentralShelf {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} />}
+              {item.type === 'helmet' && <HelmetDisplay {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
+              {item.type === 'jacket' && <JacketRail {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
+              {item.type === 'central' && <CentralShelf {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} />}
             </group>
           );
         })}

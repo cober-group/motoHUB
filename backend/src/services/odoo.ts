@@ -146,7 +146,7 @@ export class OdooService {
 
     // Pass location context so qty_available reflects per-store stock
     const kwargs: any = {
-      fields: ['name', 'display_name', 'list_price', 'image_128', 'categ_id', 'qty_available'],
+      fields: ['name', 'display_name', 'list_price', 'image_128', 'categ_id', 'qty_available', 'sales_count', 'default_code'],
       limit,
       offset,
     };
@@ -167,7 +167,7 @@ export class OdooService {
       ['barcode', '=', barcode],
     ];
     const kwargs: any = {
-      fields: ['name', 'display_name', 'list_price', 'image_128', 'categ_id', 'qty_available', 'barcode'],
+      fields: ['name', 'display_name', 'list_price', 'image_128', 'categ_id', 'qty_available', 'barcode', 'sales_count', 'default_code'],
       limit: 1,
     };
     if (locationId) kwargs.context = { location: locationId };

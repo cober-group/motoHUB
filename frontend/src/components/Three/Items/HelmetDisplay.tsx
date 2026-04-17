@@ -22,6 +22,7 @@ interface HelmetDisplayProps {
   onOpenBarcodeScanner?: (itemId: string) => void;
   isEditable?: boolean;
   isFocused?: boolean;
+  onFocusProduct?: (itemId: string, slotIndex: number) => void;
 }
 
 const getProductImage = (base64?: string) => {
@@ -29,7 +30,11 @@ const getProductImage = (base64?: string) => {
   return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
 };
 
-export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotation, assignedProducts, onRemove, onOpenSelector, onOpenBarcodeScanner, isEditable, isFocused }: HelmetDisplayProps) {
+export const HelmetDisplay = memo(function HelmetDisplay({ 
+  id, position, rotation, assignedProducts, 
+  onRemove, onOpenSelector, onOpenBarcodeScanner, 
+  isEditable, isFocused, onFocusProduct 
+}: HelmetDisplayProps) {
   return (
     <group position={position} rotation={rotation}>
       {isEditable && isFocused && (
@@ -61,8 +66,15 @@ export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotatio
             {shelfOffsets.map((offsetX, idx) => {
               const slotIndex = s * 5 + idx;
               const assigned = assignedProducts[slotIndex];
+              
+              const handleSlotClick = (e: any) => {
+                if (!assigned) return;
+                e.stopPropagation();
+                onFocusProduct?.(id, slotIndex);
+              };
+
               return (
-                <group key={slotIndex} position={[offsetX, 0, 0]}>
+                <group key={slotIndex} position={[offsetX, 0, 0]} onClick={handleSlotClick}>
                   {isEditable && isFocused && (
                     <Html position={[0, 0.06, 0.3]} center>
                       <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'helmet'); }} style={{ fontSize: '0.45rem', padding: '1px 4px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>

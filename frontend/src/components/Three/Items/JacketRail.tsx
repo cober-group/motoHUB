@@ -22,6 +22,7 @@ interface JacketRailProps {
   onOpenBarcodeScanner?: (itemId: string) => void;
   isEditable?: boolean;
   isFocused?: boolean;
+  onFocusProduct?: (itemId: string, slotIndex: number) => void;
 }
 
 const getProductImage = (base64?: string) => {
@@ -29,7 +30,11 @@ const getProductImage = (base64?: string) => {
   return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
 };
 
-export const JacketRail = memo(function JacketRail({ id, position, rotation, assignedProducts, onRemove, onOpenSelector, onOpenBarcodeScanner, isEditable, isFocused }: JacketRailProps) {
+export const JacketRail = memo(function JacketRail({ 
+  id, position, rotation, assignedProducts, 
+  onRemove, onOpenSelector, onOpenBarcodeScanner, 
+  isEditable, isFocused, onFocusProduct 
+}: JacketRailProps) {
   return (
     <group position={position} rotation={rotation}>
       {isEditable && isFocused && (
@@ -61,8 +66,15 @@ export const JacketRail = memo(function JacketRail({ id, position, rotation, ass
             {slotOffsets.map((offsetX, idx) => {
               const slotIndex = r * 8 + idx;
               const assigned = assignedProducts[slotIndex];
+
+              const handleSlotClick = (e: any) => {
+                if (!assigned) return;
+                e.stopPropagation();
+                onFocusProduct?.(id, slotIndex);
+              };
+
               return (
-                <group key={slotIndex} position={[offsetX, 0, 0]}>
+                <group key={slotIndex} position={[offsetX, 0, 0]} onClick={handleSlotClick}>
                   {isEditable && isFocused && (
                     <Html position={[0, -0.85, 0.2]} center>
                       <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'jacket'); }} style={{ fontSize: '0.55rem', padding: '2px 6px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>
