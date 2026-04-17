@@ -152,8 +152,8 @@ export function StoreScene({
 
           return (
             <group key={item.id} onClick={handleFocus}>
-              {item.type === 'helmet' && <HelmetDisplay {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id, s) => onOpenBarcodeScanner(id, s, 'helmet')} />}
-              {item.type === 'jacket' && <JacketRail {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id, s) => onOpenBarcodeScanner(id, s, 'jacket')} />}
+              {item.type === 'helmet' && <HelmetDisplay {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
+              {item.type === 'jacket' && <JacketRail {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
               {item.type === 'central' && <CentralShelf {...commonProps} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} />}
             </group>
           );

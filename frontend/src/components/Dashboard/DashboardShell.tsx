@@ -41,9 +41,7 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
   const [layoutLoading, setLayoutLoading] = useState(true);
 
   // Barcode modal
-  const [barcodeConfig, setBarcodeConfig] = useState<{
-    isOpen: boolean; itemId: string; shelfIndex: number; type: 'helmet' | 'jacket' | 'central';
-  }>({ isOpen: false, itemId: '', shelfIndex: 0, type: 'helmet' });
+  const [barcodeItemId, setBarcodeItemId] = useState<string | null>(null);
 
   const fetchProductByBarcode = useCallback(async (barcode: string) => {
     const res = await apiFetch(`/api/odoo/barcode?barcode=${encodeURIComponent(barcode)}`);
@@ -52,9 +50,9 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
     return data.product ?? null;
   }, [apiFetch]);
 
-  const handleOpenBarcodeScanner = (itemId: string, shelfIndex: number, type: 'helmet' | 'jacket' | 'central') => {
+  const handleOpenBarcodeScanner = (itemId: string) => {
     if (visitMode) return;
-    setBarcodeConfig({ isOpen: true, itemId, shelfIndex, type });
+    setBarcodeItemId(itemId);
   };
 
   // Product modal
@@ -126,6 +124,18 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
       saveLayout(next);
       return next;
     });
+  };
+
+  const handleBarcodeAssign = (product: any): boolean => {
+    if (!barcodeItemId) return false;
+    const item = placedItems.find(i => i.id === barcodeItemId);
+    if (!item) return false;
+    const maxSlots = item.type === 'helmet' ? 40 : item.type === 'jacket' ? 16 : 9;
+    const assigned = item.assignedProducts || {};
+    for (let i = 0; i < maxSlots; i++) {
+      if (!assigned[i]) { assignProduct(barcodeItemId, i, product); return true; }
+    }
+    return false;
   };
 
   const clearStore = () => {
@@ -297,10 +307,12 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
 
       {/* Barcode Modal */}
       <BarcodeModal
-        isOpen={barcodeConfig.isOpen}
-        onClose={() => setBarcodeConfig(prev => ({ ...prev, isOpen: false }))}
-        onConfirm={(product) => assignProduct(barcodeConfig.itemId, barcodeConfig.shelfIndex, product)}
+        isOpen={!!barcodeItemId}
+        onClose={() => setBarcodeItemId(null)}
+        onAssign={handleBarcodeAssign}
         fetchProductByBarcode={fetchProductByBarcode}
+        filledCount={barcodeItemId ? Object.keys(placedItems.find(i => i.id === barcodeItemId)?.assignedProducts || {}).length : 0}
+        totalSlots={barcodeItemId ? (placedItems.find(i => i.id === barcodeItemId)?.type === 'helmet' ? 40 : 16) : 0}
       />
 
       {/* Product Modal */}

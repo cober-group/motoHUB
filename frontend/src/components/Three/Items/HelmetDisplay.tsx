@@ -18,7 +18,7 @@ interface HelmetDisplayProps {
   onUpdate?: (id: string, pos: [number, number, number], rot: [number, number, number]) => void;
   onRemove?: (id: string) => void;
   onOpenSelector?: (itemId: string, shelfIndex: number, type: 'helmet') => void;
-  onOpenBarcodeScanner?: (itemId: string, shelfIndex: number) => void;
+  onOpenBarcodeScanner?: (itemId: string) => void;
   isEditable?: boolean;
 }
 
@@ -33,6 +33,9 @@ export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotatio
       {isEditable && (
         <Html position={[0, 3.5, 0]} center>
           <div style={{ display: 'flex', gap: '8px', pointerEvents: 'auto' }}>
+            <button onClick={() => onOpenBarcodeScanner?.(id)} style={{ padding: '8px 14px', background: '#1a1a1a', color: '#c8ff1d', border: '1px solid #c8ff1d', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
+              🔫 Barcode
+            </button>
             <button onClick={() => onRemove?.(id)} style={{ padding: '8px 12px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
               🗑️ Rimuovi
             </button>
@@ -60,14 +63,9 @@ export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotatio
                 <group key={slotIndex} position={[offsetX, 0, 0]}>
                   {isEditable && (
                     <Html position={[0, 0.06, 0.3]} center>
-                      <div style={{ display: 'flex', gap: '2px', pointerEvents: 'auto' }}>
-                        <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'helmet'); }} style={{ fontSize: '0.45rem', padding: '1px 4px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                          {assigned ? '🔄' : '+'}
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); onOpenBarcodeScanner?.(id, slotIndex); }} style={{ fontSize: '0.45rem', padding: '1px 4px', background: '#333', color: '#c8ff1d', border: '1px solid #c8ff1d', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                          🔫
-                        </button>
-                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'helmet'); }} style={{ fontSize: '0.45rem', padding: '1px 4px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>
+                        {assigned ? '🔄' : '+'}
+                      </button>
                     </Html>
                   )}
                   {assigned ? (

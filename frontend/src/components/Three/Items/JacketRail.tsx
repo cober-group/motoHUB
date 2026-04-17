@@ -18,7 +18,7 @@ interface JacketRailProps {
   onUpdate?: (id: string, pos: [number, number, number], rot: [number, number, number]) => void;
   onRemove?: (id: string) => void;
   onOpenSelector?: (itemId: string, shelfIndex: number, type: 'jacket') => void;
-  onOpenBarcodeScanner?: (itemId: string, shelfIndex: number) => void;
+  onOpenBarcodeScanner?: (itemId: string) => void;
   isEditable?: boolean;
 }
 
@@ -33,6 +33,9 @@ export const JacketRail = memo(function JacketRail({ id, position, rotation, ass
       {isEditable && (
         <Html position={[0, 2.5, 0]} center>
           <div style={{ display: 'flex', gap: '8px', pointerEvents: 'auto' }}>
+            <button onClick={() => onOpenBarcodeScanner?.(id)} style={{ padding: '8px 14px', background: '#1a1a1a', color: '#c8ff1d', border: '1px solid #c8ff1d', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
+              🔫 Barcode
+            </button>
             <button onClick={() => onRemove?.(id)} style={{ padding: '8px 12px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
               🗑️ Rimuovi
             </button>
@@ -60,14 +63,9 @@ export const JacketRail = memo(function JacketRail({ id, position, rotation, ass
                 <group key={slotIndex} position={[offsetX, 0, 0]}>
                   {isEditable && (
                     <Html position={[0, -0.85, 0.2]} center>
-                      <div style={{ display: 'flex', gap: '3px', pointerEvents: 'auto' }}>
-                        <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'jacket'); }} style={{ fontSize: '0.55rem', padding: '2px 6px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                          {assigned ? '🔄' : '+'}
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); onOpenBarcodeScanner?.(id, slotIndex); }} style={{ fontSize: '0.55rem', padding: '2px 6px', background: '#333', color: '#c8ff1d', border: '1px solid #c8ff1d', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-                          🔫
-                        </button>
-                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'jacket'); }} style={{ fontSize: '0.55rem', padding: '2px 6px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>
+                        {assigned ? '🔄' : '+'}
+                      </button>
                     </Html>
                   )}
                   {assigned ? (
