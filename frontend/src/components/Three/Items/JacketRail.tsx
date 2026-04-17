@@ -10,6 +10,7 @@ function getVariant(product: any): string {
   return rest;
 }
 
+
 interface JacketRailProps {
   id: string;
   position: [number, number, number];
@@ -79,9 +80,13 @@ export const JacketRail = memo(function JacketRail({ id, position, rotation, ass
                           <meshStandardMaterial color="#c8ff1d" />
                         </mesh>
                       )}
-                      <Text position={[0, -0.72, 0.3]} fontSize={0.045} color="#fff" anchorX="center" maxWidth={0.45}>{assigned.name}</Text>
-                      {getVariant(assigned) ? <Text position={[0, -0.80, 0.3]} fontSize={0.038} color="#88aaff" anchorX="center" maxWidth={0.45}>{getVariant(assigned)}</Text> : null}
-                      <Text position={[0, -0.89, 0.3]} fontSize={0.042} color="#c8ff1d" anchorX="center">{`€${(assigned.list_price ?? 0).toFixed(2)}`}</Text>
+                      <Html position={[0, -0.7, 0.35]} center distanceFactor={2.5}>
+                        <div style={{ background: 'rgba(0,0,0,0.85)', padding: '4px 8px', borderRadius: '4px', textAlign: 'center', width: '90px', pointerEvents: 'none' }}>
+                          <p style={{ margin: 0, fontSize: '6px', fontWeight: 'bold', color: '#fff', lineHeight: 1.2, fontFamily: 'system-ui' }}>{assigned.name}</p>
+                          {getVariant(assigned) ? <p style={{ margin: '2px 0 0', fontSize: '5px', color: '#88aaff', lineHeight: 1.1, fontFamily: 'system-ui' }}>{getVariant(assigned)}</p> : null}
+                          <p style={{ margin: '2px 0 0', fontSize: '6px', fontWeight: 'bold', color: '#c8ff1d', fontFamily: 'system-ui' }}>€{(assigned.list_price ?? 0).toFixed(2)}</p>
+                        </div>
+                      </Html>
                     </group>
                   ) : (
                     <mesh position={[0, -0.1, 0.05]}>

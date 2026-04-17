@@ -2,6 +2,7 @@ import { Text, Image, PivotControls, Html } from '@react-three/drei';
 import { memo } from 'react';
 import * as THREE from 'three';
 
+
 interface CentralShelfProps {
   id: string;
   position: [number, number, number];
@@ -76,8 +77,12 @@ export const CentralShelf = memo(function CentralShelf({ id, position, rotation,
                           <meshStandardMaterial color="#c8ff1d" />
                         </mesh>
                       )}
-                      <Text position={[0, -0.05, 0.2]} fontSize={0.06} color="#fff" anchorX="center" maxWidth={0.6}>{assigned.name}</Text>
-                      <Text position={[0, -0.15, 0.2]} fontSize={0.05} color="#c8ff1d" anchorX="center">{`€${assigned.list_price}`}</Text>
+                      <Html position={[0, -0.03, 0.25]} center distanceFactor={2.2}>
+                        <div style={{ background: 'rgba(0,0,0,0.85)', padding: '4px 8px', borderRadius: '4px', textAlign: 'center', width: '100px', pointerEvents: 'none' }}>
+                          <p style={{ margin: 0, fontSize: '7px', fontWeight: 'bold', color: '#fff', lineHeight: 1.2, fontFamily: 'system-ui' }}>{assigned.name}</p>
+                          <p style={{ margin: '2px 0 0', fontSize: '7px', fontWeight: 'bold', color: '#c8ff1d', fontFamily: 'system-ui' }}>€{(assigned.list_price ?? 0).toFixed(2)}</p>
+                        </div>
+                      </Html>
                     </group>
                   )}
                 </group>

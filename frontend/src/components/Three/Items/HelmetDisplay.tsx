@@ -10,6 +10,7 @@ function getVariant(product: any): string {
   return rest;
 }
 
+
 interface HelmetDisplayProps {
   id: string;
   position: [number, number, number];
@@ -79,9 +80,13 @@ export const HelmetDisplay = memo(function HelmetDisplay({ id, position, rotatio
                           <meshStandardMaterial color="#c8ff1d" roughness={0.1} metalness={0.8} />
                         </mesh>
                       )}
-                      <Text position={[0, -0.03, 0.35]} fontSize={0.028} color="#fff" anchorX="center" maxWidth={0.4}>{assigned.name}</Text>
-                      {getVariant(assigned) ? <Text position={[0, -0.075, 0.35]} fontSize={0.024} color="#88aaff" anchorX="center" maxWidth={0.4}>{getVariant(assigned)}</Text> : null}
-                      <Text position={[0, -0.115, 0.35]} fontSize={0.028} color="#c8ff1d" anchorX="center">{`€${(assigned.list_price ?? 0).toFixed(2)}`}</Text>
+                      <Html position={[0, -0.02, 0.36]} center distanceFactor={1.8}>
+                        <div style={{ background: 'rgba(0,0,0,0.85)', padding: '3px 6px', borderRadius: '3px', textAlign: 'center', width: '80px', pointerEvents: 'none' }}>
+                          <p style={{ margin: 0, fontSize: '5px', fontWeight: 'bold', color: '#fff', lineHeight: 1.2, fontFamily: 'system-ui' }}>{assigned.name}</p>
+                          {getVariant(assigned) ? <p style={{ margin: '1px 0 0', fontSize: '4px', color: '#88aaff', lineHeight: 1.1, fontFamily: 'system-ui' }}>{getVariant(assigned)}</p> : null}
+                          <p style={{ margin: '1px 0 0', fontSize: '5px', fontWeight: 'bold', color: '#c8ff1d', fontFamily: 'system-ui' }}>€{(assigned.list_price ?? 0).toFixed(2)}</p>
+                        </div>
+                      </Html>
                     </group>
                   ) : (
                     <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
