@@ -134,6 +134,7 @@ export function StoreScene({
           const placement = getItemPlacement(item.id);
           if (!placement || placement.isHidden) return null;
 
+          const isFocused = focusedItemId === item.id;
           const commonProps = {
             id: item.id,
             position: placement.position,
@@ -142,12 +143,13 @@ export function StoreScene({
             onUpdate: onUpdateItem,
             onRemove: onRemoveItem,
             onOpenSelector,
-            isEditable: isEditMode
+            isEditable: isEditMode,
+            isFocused,
           };
 
           const handleFocus = (e: any) => {
             e.stopPropagation();
-            if (!focusedItemId) onFocusItem(item.id);
+            onFocusItem(item.id);
           };
 
           return (

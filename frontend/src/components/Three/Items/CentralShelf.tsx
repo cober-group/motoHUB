@@ -11,6 +11,7 @@ interface CentralShelfProps {
   onRemove?: (id: string) => void;
   onOpenSelector?: (itemId: string, shelfIndex: number, type: 'central') => void;
   isEditable?: boolean;
+  isFocused?: boolean;
 }
 
 const getProductImage = (base64?: string) => {
@@ -18,13 +19,13 @@ const getProductImage = (base64?: string) => {
   return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
 };
 
-export const CentralShelf = memo(function CentralShelf({ id, position, rotation, assignedProducts, onUpdate, onRemove, onOpenSelector, isEditable }: CentralShelfProps) {
+export const CentralShelf = memo(function CentralShelf({ id, position, rotation, assignedProducts, onUpdate, onRemove, onOpenSelector, isEditable, isFocused }: CentralShelfProps) {
   return (
     <group position={position} rotation={rotation}>
-      {isEditable && (
+      {isEditable && isFocused && (
         <Html position={[0, 2.5, 0]} center>
           <div style={{ pointerEvents: 'auto' }}>
-            <button onClick={() => onRemove?.(id)} style={{ padding: '8px 12px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+            <button onClick={() => onRemove?.(id)} style={{ padding: '8px 12px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
               🗑️ Rimuovi
             </button>
           </div>
@@ -58,7 +59,7 @@ export const CentralShelf = memo(function CentralShelf({ id, position, rotation,
                     <boxGeometry args={[2.8, 0.05, 0.4]} />
                     <meshStandardMaterial color="#444" />
                   </mesh>
-                  {isEditable && (
+                  {isEditable && isFocused && (
                     <Html position={[1.6, 0.1, 0]} center>
                       <button onClick={() => onOpenSelector?.(id, shelfIndex, 'central')} style={{ fontSize: '0.6rem', padding: '3px 8px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>
                         {assigned ? '🔄 Mix' : '+ Scegli'}

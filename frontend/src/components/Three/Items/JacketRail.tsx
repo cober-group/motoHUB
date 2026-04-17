@@ -20,6 +20,7 @@ interface JacketRailProps {
   onOpenSelector?: (itemId: string, shelfIndex: number, type: 'jacket') => void;
   onOpenBarcodeScanner?: (itemId: string) => void;
   isEditable?: boolean;
+  isFocused?: boolean;
 }
 
 const getProductImage = (base64?: string) => {
@@ -27,16 +28,16 @@ const getProductImage = (base64?: string) => {
   return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
 };
 
-export const JacketRail = memo(function JacketRail({ id, position, rotation, assignedProducts, onRemove, onOpenSelector, onOpenBarcodeScanner, isEditable }: JacketRailProps) {
+export const JacketRail = memo(function JacketRail({ id, position, rotation, assignedProducts, onRemove, onOpenSelector, onOpenBarcodeScanner, isEditable, isFocused }: JacketRailProps) {
   return (
     <group position={position} rotation={rotation}>
-      {isEditable && (
+      {isEditable && isFocused && (
         <Html position={[0, 2.5, 0]} center>
           <div style={{ display: 'flex', gap: '8px', pointerEvents: 'auto' }}>
-            <button onClick={() => onOpenBarcodeScanner?.(id)} style={{ padding: '8px 14px', background: '#1a1a1a', color: '#c8ff1d', border: '1px solid #c8ff1d', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
+            <button onClick={() => onOpenBarcodeScanner?.(id)} style={{ padding: '8px 14px', background: '#1a1a1a', color: '#c8ff1d', border: '1px solid #c8ff1d', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>
               🔫 Barcode
             </button>
-            <button onClick={() => onRemove?.(id)} style={{ padding: '8px 12px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+            <button onClick={() => onRemove?.(id)} style={{ padding: '8px 12px', background: '#ff4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
               🗑️ Rimuovi
             </button>
           </div>
@@ -61,7 +62,7 @@ export const JacketRail = memo(function JacketRail({ id, position, rotation, ass
               const assigned = assignedProducts[slotIndex];
               return (
                 <group key={slotIndex} position={[offsetX, 0, 0]}>
-                  {isEditable && (
+                  {isEditable && isFocused && (
                     <Html position={[0, -0.85, 0.2]} center>
                       <button onClick={(e) => { e.stopPropagation(); onOpenSelector?.(id, slotIndex, 'jacket'); }} style={{ fontSize: '0.55rem', padding: '2px 6px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '3px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap', pointerEvents: 'auto' }}>
                         {assigned ? '🔄' : '+'}
