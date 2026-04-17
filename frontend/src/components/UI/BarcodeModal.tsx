@@ -26,8 +26,8 @@ const getProductImage = (base64?: string) => {
 
 export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode, filledCount, totalSlots }: BarcodeModalProps) {
   const [barcode, setBarcode] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'found' | 'assigned' | 'full' | 'notfound' | 'error'>('idle');
-  const [product, setProduct] = useState<any>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'assigned' | 'full' | 'notfound' | 'error'>('idle');
+  const [lastAssigned, setLastAssigned] = useState<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode,
   function reset() {
     setBarcode('');
     setStatus('idle');
-    setProduct(null);
+    setLastAssigned(null);
   }
 
   async function handleSubmit(e?: React.FormEvent) {
@@ -48,18 +48,25 @@ export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode,
     try {
       const p = await fetchProductByBarcode(trimmed);
       if (!p) { setStatus('notfound'); return; }
-      setProduct(p);
-      setStatus('found');
+      // Auto-assign immediately
+      const ok = onAssign(p);
+      if (ok) {
+        setLastAssigned(p);
+        setStatus('assigned');
+        // Auto-reset for next scan
+        setTimeout(() => {
+          setBarcode('');
+          setStatus('idle');
+          setLastAssigned(null);
+          inputRef.current?.focus();
+        }, 1200);
+      } else {
+        setLastAssigned(p);
+        setStatus('full');
+      }
     } catch {
       setStatus('error');
     }
-  }
-
-  function handleAssign() {
-    if (!product) return;
-    const ok = onAssign(product);
-    setStatus(ok ? 'assigned' : 'full');
-    if (ok) setTimeout(() => { reset(); inputRef.current?.focus(); }, 900);
   }
 
   if (!isOpen) return null;
@@ -82,7 +89,7 @@ export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode,
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0, color: '#c8ff1d', fontSize: '1.2rem', fontWeight: 'bold' }}>🔫 Scansiona Barcode</h2>
-            <p style={{ margin: '3px 0 0', color: '#888', fontSize: '0.8rem' }}>Scansioni multiple — ogni barcode riempie il prossimo slot vuoto</p>
+            <p style={{ margin: '3px 0 0', color: '#888', fontSize: '0.8rem' }}>Scansione automatica — trova e assegna istantaneamente</p>
           </div>
           <button onClick={onClose} style={{ padding: '8px 12px', background: '#333', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
         </div>
@@ -103,22 +110,25 @@ export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode,
             ref={inputRef}
             type="text"
             value={barcode}
-            onChange={(e) => { setBarcode(e.target.value); if (status !== 'idle') reset(); }}
-            placeholder="Barcode prodotto..."
-            disabled={isFull}
+            onChange={(e) => { setBarcode(e.target.value); if (status !== 'idle' && status !== 'loading') { setStatus('idle'); setLastAssigned(null); } }}
+            placeholder="Scansiona o digita barcode..."
+            disabled={isFull || status === 'loading'}
+            autoFocus
             style={{
               flex: 1, padding: '13px 16px', borderRadius: '10px',
-              border: `2px solid ${isFull ? '#444' : '#c8ff1d'}`, background: '#222', color: '#fff',
+              border: `2px solid ${isFull ? '#444' : status === 'assigned' ? '#00ff64' : '#c8ff1d'}`, background: '#222', color: '#fff',
               fontSize: '1rem', outline: 'none', letterSpacing: '0.05em',
-              opacity: isFull ? 0.5 : 1
+              opacity: isFull ? 0.5 : 1,
+              transition: 'border-color 0.3s'
             }}
           />
           <button type="submit" disabled={status === 'loading' || !barcode.trim() || isFull} style={{
-            padding: '13px 18px', background: '#c8ff1d', color: '#000', border: 'none',
+            padding: '13px 18px', background: status === 'loading' ? '#555' : '#c8ff1d', color: status === 'loading' ? '#999' : '#000', border: 'none',
             borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem',
-            opacity: (!barcode.trim() || status === 'loading' || isFull) ? 0.4 : 1
+            opacity: (!barcode.trim() || status === 'loading' || isFull) ? 0.4 : 1,
+            transition: 'all 0.2s'
           }}>
-            {status === 'loading' ? '…' : 'Cerca'}
+            {status === 'loading' ? '⏳' : '▶'}
           </button>
         </form>
 
@@ -134,7 +144,7 @@ export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode,
             <div style={{ textAlign: 'center', padding: '16px', color: '#888' }}>
               <div style={{ width: '28px', height: '28px', border: '3px solid #c8ff1d', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 10px' }} />
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-              <p style={{ margin: 0, fontSize: '0.85rem' }}>Ricerca in Odoo...</p>
+              <p style={{ margin: 0, fontSize: '0.85rem' }}>Ricerca e assegnazione automatica...</p>
             </div>
           )}
 
@@ -151,9 +161,23 @@ export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode,
             </div>
           )}
 
-          {!isFull && status === 'assigned' && (
-            <div style={{ background: 'rgba(0,255,100,0.08)', border: '1px solid #00ff64', borderRadius: '10px', padding: '14px', textAlign: 'center', color: '#00ff64', fontWeight: 'bold' }}>
-              ✓ Assegnato! Pronto per la prossima scansione...
+          {!isFull && status === 'assigned' && lastAssigned && (
+            <div style={{ background: 'rgba(0,255,100,0.08)', border: '1px solid #00ff64', borderRadius: '12px', padding: '14px', display: 'flex', gap: '14px', alignItems: 'center', animation: 'fadeSlotIn 0.3s ease-out' }}>
+              <style>{`@keyframes fadeSlotIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+              <div style={{ width: '52px', height: '52px', background: '#111', borderRadius: '8px', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {lastAssigned.image_128
+                  ? <img src={getProductImage(lastAssigned.image_128)} alt={lastAssigned.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  : <span style={{ fontSize: '1.5rem' }}>📦</span>
+                }
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: '0 0 2px', fontWeight: 'bold', color: '#fff', fontSize: '0.85rem' }}>{lastAssigned.name}</p>
+                {getVariant(lastAssigned) && <p style={{ margin: '0 0 3px', color: '#88aaff', fontSize: '0.72rem' }}>{getVariant(lastAssigned)}</p>}
+                <span style={{ color: '#c8ff1d', fontWeight: 'bold', fontSize: '0.85rem' }}>€{(lastAssigned.list_price ?? 0).toFixed(2)}</span>
+              </div>
+              <div style={{ flexShrink: 0, background: '#00ff64', color: '#000', padding: '6px 12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.8rem' }}>
+                ✓ Slot {filledCount}
+              </div>
             </div>
           )}
 
@@ -163,30 +187,9 @@ export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode,
             </div>
           )}
 
-          {!isFull && status === 'found' && product && (
-            <div style={{ background: '#222', borderRadius: '12px', padding: '14px', display: 'flex', gap: '14px', alignItems: 'center' }}>
-              <div style={{ width: '64px', height: '64px', background: '#111', borderRadius: '8px', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {product.image_128
-                  ? <img src={getProductImage(product.image_128)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                  : <span style={{ fontSize: '1.8rem' }}>📦</span>
-                }
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: '0 0 3px', fontWeight: 'bold', color: '#fff', fontSize: '0.9rem' }}>{product.name}</p>
-                {getVariant(product) && <p style={{ margin: '0 0 5px', color: '#88aaff', fontSize: '0.78rem' }}>{getVariant(product)}</p>}
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <span style={{ color: '#c8ff1d', fontWeight: 'bold' }}>€{(product.list_price ?? 0).toFixed(2)}</span>
-                  <span style={{ fontSize: '0.72rem', color: product.qty_available > 0 ? '#00ff64' : '#ff6666' }}>{product.qty_available} disp.</span>
-                </div>
-              </div>
-              <button
-                onClick={handleAssign}
-                style={{ padding: '10px 16px', background: '#c8ff1d', color: '#000', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#d4ff4a'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#c8ff1d'}
-              >
-                ✓ Slot {filledCount + 1}
-              </button>
+          {!isFull && status === 'idle' && (
+            <div style={{ textAlign: 'center', padding: '14px', color: '#555', fontSize: '0.8rem' }}>
+              Scansiona un barcode — il prodotto verrà inserito automaticamente
             </div>
           )}
         </div>
