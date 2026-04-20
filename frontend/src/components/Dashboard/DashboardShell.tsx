@@ -239,13 +239,27 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
 
   const nextProduct = useCallback(() => {
     if (focusedProductIndex === null || exposedProducts.length === 0) return;
-    setFocusedProductIndex((focusedProductIndex + 1) % exposedProducts.length);
-  }, [focusedProductIndex, exposedProducts.length]);
+    const currentItem = exposedProducts[focusedProductIndex];
+    const sameShelf = exposedProducts
+      .map((p, i) => ({ ...p, i }))
+      .filter(p => p.itemId === currentItem.itemId);
+    
+    const subIdx = sameShelf.findIndex(p => p.i === focusedProductIndex);
+    const nextSubIdx = (subIdx + 1) % sameShelf.length;
+    setFocusedProductIndex(sameShelf[nextSubIdx].i);
+  }, [focusedProductIndex, exposedProducts]);
 
   const prevProduct = useCallback(() => {
     if (focusedProductIndex === null || exposedProducts.length === 0) return;
-    setFocusedProductIndex((focusedProductIndex - 1 + exposedProducts.length) % exposedProducts.length);
-  }, [focusedProductIndex, exposedProducts.length]);
+    const currentItem = exposedProducts[focusedProductIndex];
+    const sameShelf = exposedProducts
+      .map((p, i) => ({ ...p, i }))
+      .filter(p => p.itemId === currentItem.itemId);
+    
+    const subIdx = sameShelf.findIndex(p => p.i === focusedProductIndex);
+    const prevSubIdx = (subIdx - 1 + sameShelf.length) % sameShelf.length;
+    setFocusedProductIndex(sameShelf[prevSubIdx].i);
+  }, [focusedProductIndex, exposedProducts]);
 
   // Keyboard navigation
   useEffect(() => {

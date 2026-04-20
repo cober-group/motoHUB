@@ -1,6 +1,6 @@
-import { Image, Html, Text } from '@react-three/drei';
+import { Html, Text } from '@react-three/drei';
 import { memo } from 'react';
-import { useProcessedImage } from '@/hooks/useProcessedImage';
+import { ProductImage } from './ProductImage';
 
 interface CentralShelfProps {
   id: string;
@@ -33,7 +33,6 @@ function SlotGroup({
   onFocusProduct?: (id: string, s: number) => void;
   itemId: string;
 }) {
-  const { processedUrl } = useProcessedImage(assigned?.image_128);
   const isFront = posZ > 0;
 
   return (
@@ -52,9 +51,15 @@ function SlotGroup({
       )}
       {assigned ? (
         <>
-          <Image url={processedUrl} scale={0.3} position={[0, 0.18, isFront ? 0.02 : -0.02]} transparent />
+          <ProductImage 
+            base64={assigned.image_128} 
+            scale={0.3} 
+            position={[0, 0.18, isFront ? 0.02 : -0.02]} 
+            rotation={[0, isFront ? 0 : Math.PI, 0]}
+            transparent 
+          />
           <Html position={[0, -0.03, isFront ? 0.12 : -0.12]} center distanceFactor={2.0}>
-            <div style={{ background: 'rgba(0,0,0,0.88)', padding: '2px 5px', borderRadius: '3px', textAlign: 'center', width: '62px', pointerEvents: 'none' }}>
+            <div style={{ background: 'rgba(0,0,0,0.88)', padding: '2px 5px', borderRadius: '3px', textAlign: 'center', width: '62px', pointerEvents: 'none', transform: isFront ? 'none' : 'rotateY(180deg)' }}>
               <p style={{ margin: 0, fontSize: '5px', fontWeight: 'bold', color: '#fff', lineHeight: 1.2, fontFamily: 'system-ui', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{assigned.name}</p>
               <p style={{ margin: '1px 0 0', fontSize: '5px', fontWeight: 'bold', color: '#c8ff1d', fontFamily: 'system-ui' }}>€{(assigned.list_price ?? 0).toFixed(0)}</p>
             </div>
