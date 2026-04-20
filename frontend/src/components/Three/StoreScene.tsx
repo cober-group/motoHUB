@@ -36,6 +36,7 @@ export function StoreScene({
   onUpdateItem, onRemoveItem, onOpenSelector, onOpenBarcodeScanner
 }: StoreSceneProps) {
   const controlsRef = useRef<CameraControls>(null);
+  const lastMatrix = useRef<THREE.Matrix4>(new THREE.Matrix4());
 
   // --- DETERMINISTIC PLACEMENT HELPER ---
   const getItemPlacement = (id: string) => {
@@ -269,15 +270,15 @@ export function StoreScene({
                   lineWidth={2}
                   anchor={[0, 0, 0]}
                   onDragStart={() => { if (controlsRef.current) controlsRef.current.enabled = false; }}
-                  onDragEnd={(l, deltaL, w, deltaW) => {
+                  onDrag={(l, deltaL, w) => { lastMatrix.current.copy(w); }}
+                  onDragEnd={() => {
                     if (controlsRef.current) controlsRef.current.enabled = true;
-                    // Extract position and rotation from the world matrix
+                    // Extract position and rotation from the captured world matrix
                     const pos = new THREE.Vector3();
                     const quat = new THREE.Quaternion();
                     const scale = new THREE.Vector3();
-                    w.decompose(pos, quat, scale);
+                    lastMatrix.current.decompose(pos, quat, scale);
                     const rot = new THREE.Euler().setFromQuaternion(quat);
-                    onUpdateItem(item.id, [pos.x, pos.y, pos.z], [rot.x, rot.y, rot.getRotationVertical ? rot.y : rot.y, rot.z]);
                     // Simplified rotation save: only Y axis for furniture usually
                     onUpdateItem(item.id, [pos.x, 0, pos.z], [0, rot.y, 0]);
                   }}
