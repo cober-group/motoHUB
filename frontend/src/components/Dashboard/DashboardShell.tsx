@@ -291,9 +291,15 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const sZ = Math.max(1, Math.floor((availZ - bodyW) / wallLen) + 1);
   const maxFurnitureSlots = (sX * 2) + (sZ * 2);
   const wallItems = placedItems.filter(i => i.type === 'helmet' || i.type === 'jacket').length;
-  const isFurnitureOverflowing = wallItems >= maxFurnitureSlots;
-
   const currentFocusedProduct = focusedProductIndex !== null ? exposedProducts[focusedProductIndex] : null;
+  const centralItemsCount = placedItems.filter(i => i.type === 'central').length;
+  const spacingX = 4.5, spacingZ = 3.0, islandMargin = 2.5;
+  const iAvailX = (dimensions.width * 2) - (islandMargin * 2);
+  const iAvailZ = (dimensions.length * 2) - (islandMargin * 2);
+  const iCols = Math.max(1, Math.floor(iAvailX / spacingX) + 1);
+  const iRows = Math.max(1, Math.floor(iAvailZ / spacingZ) + 1);
+  const maxIslandSlots = iCols * iRows;
+  const isIslandOverflowing = centralItemsCount >= maxIslandSlots;
 
   return (
     <main style={{ width: '100vw', height: '100vh', background: '#1d1d1d', overflow: 'hidden', display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -352,6 +358,11 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
                 <span>Arredi a Parete</span><span>{wallItems} / {maxFurnitureSlots}</span>
               </div>
             </div>
+            <div style={{ marginTop: '8px', padding: '8px 12px', background: isIslandOverflowing ? 'rgba(255,68,68,0.1)' : 'rgba(200,255,29,0.04)', borderRadius: '8px', border: `1px solid ${isIslandOverflowing ? 'rgba(255,68,68,0.3)' : 'rgba(200,255,29,0.15)'}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: isIslandOverflowing ? '#ff6666' : '#c8ff1d', fontWeight: 'bold' }}>
+                <span>Isole Centrali</span><span>{centralItemsCount} / {maxIslandSlots}</span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -361,7 +372,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
             <p style={{ color: '#555', fontSize: '0.7rem', fontWeight: 'bold', margin: '0 0 4px', letterSpacing: '1px' }}>ELEMENTI ARREDO</p>
             <button onClick={() => addItem('helmet')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Espositore Caschi</button>
             <button onClick={() => addItem('jacket')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Rella Giacche</button>
-            <button onClick={() => addItem('central')} className="boost-btn-brute">+ Isola Centrale</button>
+            <button onClick={() => addItem('central')} disabled={isIslandOverflowing} className="boost-btn-brute" style={{ opacity: isIslandOverflowing ? 0.4 : 1, cursor: isIslandOverflowing ? 'not-allowed' : 'pointer' }}>+ Isola Centrale</button>
           </div>
         )}
 
