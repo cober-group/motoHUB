@@ -74,21 +74,6 @@ export const Entrance = memo(function Entrance({
         BENVENUTI
       </Text>
 
-      {/* Floor Mat / Rug */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 1.0]} receiveShadow>
-        <planeGeometry args={[2.2, 1.8]} />
-        <meshStandardMaterial color="#111" roughness={0.9} />
-      </mesh>
-      <Text
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.02, 1.0]}
-        fontSize={0.18}
-        color="#555"
-        fontWeight="bold"
-        anchorX="center"
-      >
-        RIDE WITH US
-      </Text>
 
       <Text position={[0, 3.2, 0]} fontSize={0.15} color="#c8ff1d" fontWeight="bold">
         Ingresso Principale
