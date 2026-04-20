@@ -34,6 +34,12 @@ export async function initDb() {
     );
   `);
 
+  // Safe migrations for new columns
+  await pool.query(`
+    ALTER TABLE layouts ADD COLUMN IF NOT EXISTS width_m NUMERIC DEFAULT 15;
+    ALTER TABLE layouts ADD COLUMN IF NOT EXISTS depth_m NUMERIC DEFAULT 10;
+  `);
+
   // Seed default admin if not exists
   const { rows } = await pool.query(`SELECT id FROM users WHERE role = 'admin' LIMIT 1`);
   if (rows.length === 0) {

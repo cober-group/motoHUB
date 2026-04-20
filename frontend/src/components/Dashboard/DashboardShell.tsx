@@ -20,7 +20,7 @@ export interface DashboardShellProps {
 const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '');
 const PAGE_SIZE = 20;
 
-export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode = false, onExitVisit }: DashboardShellProps) {
+export function DashboardShell({ role, storeId, storeName, visitMode = false, onExitVisit }: DashboardShellProps) {
   const { user, token, logout } = useAuth();
   const apiFetch = useApiFetch();
   const router = useRouter();
@@ -35,7 +35,8 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
   const [mounted, setMounted] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [isInventoryMode, setIsInventoryMode] = useState(false);
-  const [sqm, setSqm] = useState(initialSqm ?? 150);
+  const [widthM, setWidthM] = useState(15);
+  const [depthM, setDepthM] = useState(10);
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [focusedProductIndex, setFocusedProductIndex] = useState<number | null>(null);
@@ -96,26 +97,29 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
       .then(r => r.json())
       .then(data => {
         setPlacedItems(data.items || []);
+        if (data.widthM) setWidthM(data.widthM);
+        if (data.depthM) setDepthM(data.depthM);
         setLayoutLoading(false);
       })
       .catch(() => setLayoutLoading(false));
   }, [mounted, resolvedStoreId]);
 
   // ── Debounced layout save ─────────────────────────────────────
-  const saveLayout = useCallback((items: PlacedItem[]) => {
+  const saveLayout = useCallback((items: PlacedItem[], wM = widthM, dM = depthM) => {
     if (!resolvedStoreId || visitMode) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       apiFetch(`/api/stores/${resolvedStoreId}/layout`, {
         method: 'PUT',
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, widthM: wM, depthM: dM }),
       }).catch(console.error);
     }, 800);
-  }, [resolvedStoreId, visitMode, apiFetch]);
+  }, [resolvedStoreId, visitMode, apiFetch, widthM, depthM]);
 
+  // Three.js uses half-sizes: room spans [-width, +width] × [-depth, +depth]
   const dimensions = {
-    length: Math.sqrt(sqm * 2) / 2,
-    width: Math.sqrt(sqm / 2) / 2,
+    width: widthM / 2,
+    length: depthM / 2,
   };
 
   // ── Layout mutations ──────────────────────────────────────────
@@ -161,10 +165,12 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
     saveLayout([]);
   };
 
-  const handleSqmChange = (val: number) => {
-    setSqm(val);
-    if (!resolvedStoreId) return;
-    apiFetch(`/api/stores/${resolvedStoreId}`, { method: 'PATCH', body: JSON.stringify({ sqm: val }) }).catch(console.error);
+  const handleDimensionChange = (w: number, d: number) => {
+    setWidthM(w);
+    setDepthM(d);
+    saveLayout(placedItems, w, d);
+    if (resolvedStoreId)
+      apiFetch(`/api/stores/${resolvedStoreId}`, { method: 'PATCH', body: JSON.stringify({ sqm: w * d }) }).catch(console.error);
   };
 
   // ── Product modal ─────────────────────────────────────────────
@@ -317,10 +323,23 @@ export function DashboardShell({ role, storeId, storeName, initialSqm, visitMode
         {/* Dimensions */}
         {canEditDimensions && (
           <div style={{ padding: '18px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c8ff1d', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px' }}>
-              <span>Dimensioni Negozio</span><span>{sqm} m²</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c8ff1d', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '12px' }}>
+              <span>Dimensioni Negozio</span><span>{widthM} × {depthM} m = {widthM * depthM} m²</span>
             </div>
-            <input type="range" min="50" max="1000" step="10" value={sqm} onChange={e => handleSqmChange(parseInt(e.target.value))} style={{ width: '100%', cursor: 'pointer', accentColor: '#c8ff1d' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#888', marginBottom: '4px' }}>
+                  <span>Larghezza</span><span style={{ color: '#c8ff1d' }}>{widthM} m</span>
+                </div>
+                <input type="range" min="5" max="50" step="1" value={widthM} onChange={e => handleDimensionChange(parseInt(e.target.value), depthM)} style={{ width: '100%', cursor: 'pointer', accentColor: '#c8ff1d' }} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#888', marginBottom: '4px' }}>
+                  <span>Profondità</span><span style={{ color: '#c8ff1d' }}>{depthM} m</span>
+                </div>
+                <input type="range" min="5" max="50" step="1" value={depthM} onChange={e => handleDimensionChange(widthM, parseInt(e.target.value))} style={{ width: '100%', cursor: 'pointer', accentColor: '#c8ff1d' }} />
+              </div>
+            </div>
             <div style={{ marginTop: '10px', padding: '8px 12px', background: isFurnitureOverflowing ? 'rgba(255,68,68,0.1)' : 'rgba(200,255,29,0.04)', borderRadius: '8px', border: `1px solid ${isFurnitureOverflowing ? 'rgba(255,68,68,0.3)' : 'rgba(200,255,29,0.15)'}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: isFurnitureOverflowing ? '#ff6666' : '#c8ff1d', fontWeight: 'bold' }}>
                 <span>Arredi a Parete</span><span>{wallItems} / {maxFurnitureSlots}</span>

@@ -1,6 +1,41 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 
+function playBeep(type: 'success' | 'error') {
+  try {
+    const ctx = new AudioContext();
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+
+    if (type === 'success') {
+      // Two ascending tones: quick scanner acceptance
+      [880, 1320].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.12);
+        osc.start(ctx.currentTime + i * 0.1);
+        osc.stop(ctx.currentTime + i * 0.1 + 0.12);
+      });
+    } else {
+      // Low descending buzz: rejection
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(300, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.35);
+    }
+
+    setTimeout(() => ctx.close(), 1000);
+  } catch { /* browser blocked audio */ }
+}
+
 interface BarcodeModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -47,10 +82,11 @@ export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode,
     setStatus('loading');
     try {
       const p = await fetchProductByBarcode(trimmed);
-      if (!p) { setStatus('notfound'); return; }
+      if (!p) { playBeep('error'); setStatus('notfound'); return; }
       // Auto-assign immediately
       const ok = onAssign(p);
       if (ok) {
+        playBeep('success');
         setLastAssigned(p);
         setStatus('assigned');
         // Auto-reset for next scan
@@ -61,6 +97,7 @@ export function BarcodeModal({ isOpen, onClose, onAssign, fetchProductByBarcode,
           inputRef.current?.focus();
         }, 1200);
       } else {
+        playBeep('error');
         setLastAssigned(p);
         setStatus('full');
       }
