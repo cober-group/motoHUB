@@ -24,25 +24,25 @@ export function StoreRoom({ width, depth }: StoreRoomProps) {
       {/* Back Wall */}
       <mesh position={[0, 2.5, -depth]} castShadow receiveShadow>
         <boxGeometry args={[width * 2, 5, 0.1]} />
-        <meshStandardMaterial color="#1a1a1a" roughness={0.4} />
+        <meshStandardMaterial color="#1a1a1a" transparent opacity={0.15} roughness={0.4} />
       </mesh>
 
-      {/* Front Wall (Optional, for occlusion) */}
+      {/* Front Wall */}
       <mesh position={[0, 2.5, depth]} receiveShadow>
         <boxGeometry args={[width * 2, 5, 0.1]} />
-        <meshStandardMaterial color="#1a1a1a" transparent opacity={0.1} />
+        <meshStandardMaterial color="#1a1a1a" transparent opacity={0.15} />
       </mesh>
 
       {/* Left Wall */}
       <mesh position={[-width, 2.5, 0]} rotation={[0, Math.PI / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[depth * 2, 5, 0.1]} />
-        <meshStandardMaterial color="#1a1a1a" roughness={0.4} />
+        <meshStandardMaterial color="#1a1a1a" transparent opacity={0.15} roughness={0.4} />
       </mesh>
 
       {/* Right Wall */}
       <mesh position={[width, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[depth * 2, 5, 0.1]} />
-        <meshStandardMaterial color="#1a1a1a" roughness={0.4} />
+        <meshStandardMaterial color="#1a1a1a" transparent opacity={0.15} roughness={0.4} />
       </mesh>
     </group>
   );

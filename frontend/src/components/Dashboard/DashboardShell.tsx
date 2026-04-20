@@ -168,7 +168,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
     if (!barcodeItemId) return false;
     const item = placedItems.find(i => i.id === barcodeItemId);
     if (!item) return false;
-    const maxSlots = item.type === 'helmet' ? 40 : item.type === 'jacket' ? 16 : 30;
+    const maxSlots = item.type === 'helmet' ? 40 : item.type === 'jacket' ? 16 : 40;
     const assigned = item.assignedProducts || {};
     for (let i = 0; i < maxSlots; i++) {
       if (!assigned[i]) { assignProduct(barcodeItemId, i, product); return true; }
@@ -580,7 +580,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
         onAssign={handleBarcodeAssign}
         fetchProductByBarcode={fetchProductByBarcode}
         filledCount={barcodeItemId ? Object.keys(placedItems.find(i => i.id === barcodeItemId)?.assignedProducts || {}).length : 0}
-        totalSlots={barcodeItemId ? (() => { const t = placedItems.find(i => i.id === barcodeItemId)?.type; return t === 'helmet' ? 30 : t === 'jacket' ? 16 : 40; })() : 0}
+        totalSlots={barcodeItemId ? (() => { const t = placedItems.find(i => i.id === barcodeItemId)?.type; return t === 'jacket' ? 16 : 40; })() : 0}
       />
 
       {/* Product Modal */}

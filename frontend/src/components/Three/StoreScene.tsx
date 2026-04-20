@@ -45,15 +45,25 @@ export function StoreScene({
       const centralIndex = centralItems.findIndex(ci => ci.id === id);
       if (centralIndex === -1) return { position: item.position, rotation: item.rotation, isHidden: false };
 
+      // Gondola width scales with store width to keep 1.5m aisles on both sides.
+      // Formula: gondolaWidth = (width - 0.6 - 1.5 - 0.03) * 2 = width*2 - 4.26
+      const gondolaWidth = Math.min(3.0, width * 2 - 4.26);
+      if (gondolaWidth < 1.5) return { position: item.position, rotation: item.rotation, isHidden: true };
+
+      const gondolaHalfWidth = gondolaWidth / 2 + 0.03; // include upright
+      const gondolaHalfDepth = 0.26;
+      const minAisle = 1.5;
+      const wallMargin = 0.6;
+
+      // Max gondola-center distance from origin that still clears wall fixtures
+      const maxXPos = Math.max(0, (width - wallMargin) - gondolaHalfWidth - minAisle);
+      const maxZPos = Math.max(0, (depth - wallMargin) - gondolaHalfDepth - minAisle);
+
       const spacingX = 4.5;
       const spacingZ = 3.0;
-      const margin = 2.5;
 
-      const availX = (width * 2) - (margin * 2);
-      const availZ = (depth * 2) - (margin * 2);
-
-      const numCols = Math.max(1, Math.floor(availX / spacingX) + 1);
-      const numRows = Math.max(1, Math.floor(availZ / spacingZ) + 1);
+      const numCols = Math.floor(maxXPos * 2 / spacingX) + 1;
+      const numRows = Math.floor(maxZPos * 2 / spacingZ) + 1;
       const maxIslands = numCols * numRows;
 
       if (centralIndex >= maxIslands) {
@@ -66,8 +76,8 @@ export function StoreScene({
       const totalW = (numCols - 1) * spacingX;
       const totalD = (numRows - 1) * spacingZ;
 
-      const xPos = -(totalW / 2) + col * spacingX;
-      const zPos = -(totalD / 2) + row * spacingZ;
+      const xPos = numCols > 1 ? -(totalW / 2) + col * spacingX : 0;
+      const zPos = numRows > 1 ? -(totalD / 2) + row * spacingZ : 0;
 
       return { position: [xPos, 0, zPos], rotation: [0, 0, 0], isHidden: false };
     }
@@ -132,13 +142,15 @@ export function StoreScene({
       return [slotOffsets[idx], 0.8 + r * 1.5, 0];
     }
     if (type === 'central') {
+      const gw = Math.min(3.0, Math.max(1.5, width * 2 - 4.26));
+      const hw = gw / 2;
       const isBack = slotIndex >= 20;
       const sideSlot = slotIndex % 20;
       const shelfRow = Math.floor(sideSlot / 5);
       const col = sideSlot % 5;
-      const xPos = ([-1.1, -0.55, 0, 0.55, 1.1] as const)[col];
-      const yPos = ([0.64, 1.14, 1.64, 2.14] as const)[shelfRow];
-      return [xPos, yPos, isBack ? -0.32 : 0.32];
+      const xPositions = [-hw * 0.88, -hw * 0.44, 0, hw * 0.44, hw * 0.88];
+      const yPositions = [0.64, 1.14, 1.64, 2.14];
+      return [xPositions[col], yPositions[shelfRow], isBack ? -0.32 : 0.32];
     }
     return [0, 0, 0];
   };
@@ -234,7 +246,7 @@ export function StoreScene({
             <group key={item.id} onClick={handleFocus}>
               {item.type === 'helmet' && <HelmetDisplay {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
               {item.type === 'jacket' && <JacketRail {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
-              {item.type === 'central' && <CentralShelf {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'central')} />}
+              {item.type === 'central' && <CentralShelf {...commonProps} gondolaWidth={Math.min(3.0, Math.max(1.5, width * 2 - 4.26))} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'central')} />}
             </group>
           );
         })}

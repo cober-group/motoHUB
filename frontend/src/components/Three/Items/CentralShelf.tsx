@@ -7,6 +7,7 @@ interface CentralShelfProps {
   position: [number, number, number];
   rotation: [number, number, number];
   assignedProducts: Record<number, any>;
+  gondolaWidth?: number; // 1.5–3.0 m, scales with store width
   onUpdate?: (id: string, pos: [number, number, number], rot: [number, number, number]) => void;
   onRemove?: (id: string) => void;
   onOpenSelector?: (itemId: string, shelfIndex: number, type: 'central') => void;
@@ -19,10 +20,8 @@ interface CentralShelfProps {
 // 4 shelves × 5 columns × 2 sides = 40 slots
 // slots 0-19: front side (+Z face), slots 20-39: back side (-Z face)
 const SHELF_Y = [0.52, 1.02, 1.52, 2.02] as const;
-const SLOT_X = [-1.1, -0.55, 0, 0.55, 1.1] as const;
 const PRODUCT_Z_FRONT = 0.32;
 const PRODUCT_Z_BACK = -0.32;
-
 
 function SlotGroup({
   slotIndex, assigned, isEditable, isFocused, posZ,
@@ -36,9 +35,7 @@ function SlotGroup({
   const isFront = posZ > 0;
 
   return (
-    <group
-      onClick={assigned ? (e) => { e.stopPropagation(); onFocusProduct?.(itemId, slotIndex); } : undefined}
-    >
+    <group onClick={assigned ? (e) => { e.stopPropagation(); onFocusProduct?.(itemId, slotIndex); } : undefined}>
       {isEditable && isFocused && (
         <Html position={[0, 0.22, isFront ? 0.06 : -0.06]} center>
           <button
@@ -51,12 +48,12 @@ function SlotGroup({
       )}
       {assigned ? (
         <>
-          <ProductImage 
-            base64={assigned.image_128} 
-            scale={0.3} 
-            position={[0, 0.18, isFront ? 0.02 : -0.02]} 
+          <ProductImage
+            base64={assigned.image_128}
+            scale={0.3}
+            position={[0, 0.18, isFront ? 0.02 : -0.02]}
             rotation={[0, isFront ? 0 : Math.PI, 0]}
-            transparent 
+            transparent
           />
           <Html position={[0, -0.03, isFront ? 0.12 : -0.12]} center distanceFactor={2.0}>
             <div style={{ background: 'rgba(0,0,0,0.88)', padding: '2px 5px', borderRadius: '3px', textAlign: 'center', width: '62px', pointerEvents: 'none' }}>
@@ -77,17 +74,28 @@ function SlotGroup({
 
 export const CentralShelf = memo(function CentralShelf({
   id, position, rotation, assignedProducts,
+  gondolaWidth = 3.0,
   onRemove, onOpenSelector, onOpenBarcodeScanner,
   isEditable, isFocused, onFocusProduct,
 }: CentralShelfProps) {
   const totalAssigned = Object.keys(assignedProducts).length;
+
+  // All geometry scales with gondolaWidth
+  const gw = gondolaWidth;
+  const hw = gw / 2;
+  const uprightX = hw + 0.03;
+  const baseW = gw + 0.12;
+  const plankW = gw - 0.1;
+
+  // 5 slot positions evenly distributed along gondola width
+  const slotX = [-hw * 0.88, -hw * 0.44, 0, hw * 0.44, hw * 0.88];
 
   return (
     <group position={position} rotation={rotation}>
 
       {/* Controls bar */}
       {isEditable && isFocused && (
-        <Html position={[0, 2.5, 0]} center>
+        <Html position={[0, 2.7, 0]} center>
           <div style={{ display: 'flex', gap: '8px', pointerEvents: 'auto' }}>
             <button
               onClick={() => onOpenBarcodeScanner?.(id)}
@@ -105,51 +113,45 @@ export const CentralShelf = memo(function CentralShelf({
         </Html>
       )}
 
-      {/* ── Gondola structure ── */}
-      {/* Central backbone panel */}
-      <mesh position={[0, 1.05, 0]} receiveShadow>
-        <boxGeometry args={[3.0, 2.1, 0.06]} />
+      {/* ── Gondola structure (all widths derived from gw) ── */}
+      <mesh position={[0, 1.15, 0]} receiveShadow>
+        <boxGeometry args={[gw, 2.3, 0.06]} />
         <meshStandardMaterial color="#2a2a2a" roughness={0.8} />
       </mesh>
-      {/* Left upright */}
-      <mesh position={[-1.53, 1.05, 0]} receiveShadow>
-        <boxGeometry args={[0.06, 2.1, 0.5]} />
+      <mesh position={[-uprightX, 1.15, 0]} receiveShadow>
+        <boxGeometry args={[0.06, 2.3, 0.52]} />
         <meshStandardMaterial color="#2a2a2a" />
       </mesh>
-      {/* Right upright */}
-      <mesh position={[1.53, 1.05, 0]} receiveShadow>
-        <boxGeometry args={[0.06, 2.1, 0.5]} />
+      <mesh position={[uprightX, 1.15, 0]} receiveShadow>
+        <boxGeometry args={[0.06, 2.3, 0.52]} />
         <meshStandardMaterial color="#2a2a2a" />
       </mesh>
-      {/* Base */}
       <mesh position={[0, 0.04, 0]} receiveShadow castShadow>
-        <boxGeometry args={[3.12, 0.08, 0.52]} />
+        <boxGeometry args={[baseW, 0.08, 0.52]} />
         <meshStandardMaterial color="#333" />
       </mesh>
-      {/* Top cap */}
-      <mesh position={[0, 2.12, 0]} receiveShadow>
-        <boxGeometry args={[3.12, 0.06, 0.52]} />
+      <mesh position={[0, 2.32, 0]} receiveShadow>
+        <boxGeometry args={[baseW, 0.06, 0.52]} />
         <meshStandardMaterial color="#333" />
       </mesh>
 
-      {/* Front shelf planks */}
+      {/* Front and back shelf planks */}
       {SHELF_Y.map((y) => (
-        <mesh key={`fp-${y}`} position={[0, y, 0.22]} receiveShadow>
-          <boxGeometry args={[2.9, 0.04, 0.22]} />
-          <meshStandardMaterial color="#3a3a3a" metalness={0.3} roughness={0.5} />
-        </mesh>
-      ))}
-      {/* Back shelf planks */}
-      {SHELF_Y.map((y) => (
-        <mesh key={`bp-${y}`} position={[0, y, -0.22]} receiveShadow>
-          <boxGeometry args={[2.9, 0.04, 0.22]} />
-          <meshStandardMaterial color="#3a3a3a" metalness={0.3} roughness={0.5} />
-        </mesh>
+        <group key={y}>
+          <mesh position={[0, y, 0.22]} receiveShadow>
+            <boxGeometry args={[plankW, 0.04, 0.22]} />
+            <meshStandardMaterial color="#3a3a3a" metalness={0.3} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, y, -0.22]} receiveShadow>
+            <boxGeometry args={[plankW, 0.04, 0.22]} />
+            <meshStandardMaterial color="#3a3a3a" metalness={0.3} roughness={0.5} />
+          </mesh>
+        </group>
       ))}
 
-      {/* ── Front side products (slots 0-14) ── */}
+      {/* ── Front side products (slots 0-19) ── */}
       {SHELF_Y.map((shelfY, shelfRow) =>
-        SLOT_X.map((x, col) => {
+        slotX.map((x, col) => {
           const slotIndex = shelfRow * 5 + col;
           return (
             <group key={slotIndex} position={[x, shelfY + 0.12, PRODUCT_Z_FRONT]}>
@@ -170,7 +172,7 @@ export const CentralShelf = memo(function CentralShelf({
 
       {/* ── Back side products (slots 20-39) ── */}
       {SHELF_Y.map((shelfY, shelfRow) =>
-        SLOT_X.map((x, col) => {
+        slotX.map((x, col) => {
           const slotIndex = 20 + shelfRow * 5 + col;
           return (
             <group key={slotIndex} position={[x, shelfY + 0.12, PRODUCT_Z_BACK]}>
@@ -189,7 +191,7 @@ export const CentralShelf = memo(function CentralShelf({
         })
       )}
 
-      <Text position={[0, 2.28, 0.05]} fontSize={0.11} color="#c8ff1d" fontWeight="bold" anchorX="center">
+      <Text position={[0, 2.48, 0.05]} fontSize={0.11} color="#c8ff1d" fontWeight="bold" anchorX="center">
         {`Isola Centrale  ${totalAssigned}/40`}
       </Text>
     </group>
