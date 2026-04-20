@@ -39,6 +39,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Re-fetch permissions when window regains focus (picks up admin changes instantly)
+  useEffect(() => {
+    const onFocus = () => {
+      const t = localStorage.getItem('mh-token');
+      if (t) fetchMe(t);
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
+
   async function fetchMe(t: string) {
     try {
       const res = await fetch(`${API}/auth/me`, {

@@ -203,20 +203,24 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
               <p style={{ ...S.label, marginBottom: '12px' }}>UTENTI NEGOZIO</p>
 
               {(storeUsers[store.id] || []).map(u => (
-                <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#222', borderRadius: '8px', marginBottom: '6px', gap: '8px' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ color: '#ccc', fontSize: '0.85rem' }}>{u.email}</span>
-                    <span style={{ marginLeft: '8px', fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: u.is_editor ? 'rgba(200,255,29,0.1)' : 'rgba(255,100,100,0.1)', color: u.is_editor ? '#c8ff1d' : '#ff6666', border: `1px solid ${u.is_editor ? 'rgba(200,255,29,0.3)' : 'rgba(255,100,100,0.3)'}` }}>
-                      {u.is_editor ? 'EDITOR' : 'SOLA LETTURA'}
-                    </span>
+                <div key={u.id} style={{ background: '#222', borderRadius: '8px', marginBottom: '6px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* Top row: email + delete */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#ccc', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</span>
+                    <button style={{ ...S.btnRed, padding: '4px 10px', flexShrink: 0 }} onClick={() => handleDeleteUser(store.id, u.id)}>× Elimina</button>
                   </div>
-                  <button
-                    onClick={() => handleToggleEditor(store.id, u.id, u.is_editor)}
-                    style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.05)', color: '#aaa', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.7rem', whiteSpace: 'nowrap' }}
-                  >
-                    {u.is_editor ? '🔒 Rimuovi editor' : '✏️ Rendi editor'}
-                  </button>
-                  <button style={S.btnRed} onClick={() => handleDeleteUser(store.id, u.id)}>×</button>
+                  {/* Bottom row: badge + toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: u.is_editor ? 'rgba(200,255,29,0.1)' : 'rgba(255,100,100,0.1)', color: u.is_editor ? '#c8ff1d' : '#ff6666', border: `1px solid ${u.is_editor ? 'rgba(200,255,29,0.25)' : 'rgba(255,100,100,0.25)'}` }}>
+                      {u.is_editor ? '✏️ EDITOR' : '👁 SOLA LETTURA'}
+                    </span>
+                    <button
+                      onClick={() => handleToggleEditor(store.id, u.id, u.is_editor)}
+                      style={{ padding: '3px 10px', background: 'transparent', color: '#666', border: '1px solid #333', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }}
+                    >
+                      {u.is_editor ? 'Rimuovi permesso' : 'Concedi permesso'}
+                    </button>
+                  </div>
                 </div>
               ))}
 
