@@ -45,18 +45,31 @@ export function StoreScene({
       const centralIndex = centralItems.findIndex(ci => ci.id === id);
       if (centralIndex === -1) return { position: item.position, rotation: item.rotation, isHidden: false };
 
-      const gondolaSpacingZ = 2.5;
-      const wallMarginZ = 1.8;
-      const availableZ = depth * 2 - wallMarginZ * 2;
-      const maxGondolas = Math.max(1, Math.floor(availableZ / gondolaSpacingZ) + 1);
+      const spacingX = 4.5;
+      const spacingZ = 3.0;
+      const margin = 2.5;
 
-      if (centralIndex >= maxGondolas) {
+      const availX = (width * 2) - (margin * 2);
+      const availZ = (depth * 2) - (margin * 2);
+
+      const numCols = Math.max(1, Math.floor(availX / spacingX) + 1);
+      const numRows = Math.max(1, Math.floor(availZ / spacingZ) + 1);
+      const maxIslands = numCols * numRows;
+
+      if (centralIndex >= maxIslands) {
         return { position: item.position, rotation: item.rotation, isHidden: true };
       }
 
-      const totalSpan = (maxGondolas - 1) * gondolaSpacingZ;
-      const zPos = -(totalSpan / 2) + centralIndex * gondolaSpacingZ;
-      return { position: [0, 0, zPos], rotation: [0, 0, 0], isHidden: false };
+      const col = centralIndex % numCols;
+      const row = Math.floor(centralIndex / numCols);
+
+      const totalW = (numCols - 1) * spacingX;
+      const totalD = (numRows - 1) * spacingZ;
+
+      const xPos = -(totalW / 2) + col * spacingX;
+      const zPos = -(totalD / 2) + row * spacingZ;
+
+      return { position: [xPos, 0, zPos], rotation: [0, 0, 0], isHidden: false };
     }
 
     // Perimeter logic (helmet / jacket)
