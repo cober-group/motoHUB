@@ -168,7 +168,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
     if (!barcodeItemId) return false;
     const item = placedItems.find(i => i.id === barcodeItemId);
     if (!item) return false;
-    const maxSlots = item.type === 'helmet' ? 40 : item.type === 'jacket' ? 16 : 6;
+    const maxSlots = item.type === 'helmet' ? 40 : item.type === 'jacket' ? 16 : 30;
     const assigned = item.assignedProducts || {};
     for (let i = 0; i < maxSlots; i++) {
       if (!assigned[i]) { assignProduct(barcodeItemId, i, product); return true; }
@@ -219,7 +219,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
     setModalProducts([]);
     setTrendingProducts([]);
     setTrendingLoading(true);
-    setModalConfig({ isOpen: true, itemId, shelfIndex, type, title: `Seleziona Prodotto — ${type === 'helmet' ? 'Casco' : type === 'jacket' ? 'Giacca' : 'Arredo Centrale'}` });
+    setModalConfig({ isOpen: true, itemId, shelfIndex, type, title: `Seleziona Prodotto — ${type === 'helmet' ? 'Casco' : type === 'jacket' ? 'Giacca' : 'Isola Centrale (qualsiasi prodotto)'}` });
     apiFetch(`/api/odoo/trending?fixture_type=${type}&limit=10`)
       .then(r => r.json())
       .then(data => { setTrendingProducts(data.products || []); setTrendingLoading(false); })
@@ -550,7 +550,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
         onAssign={handleBarcodeAssign}
         fetchProductByBarcode={fetchProductByBarcode}
         filledCount={barcodeItemId ? Object.keys(placedItems.find(i => i.id === barcodeItemId)?.assignedProducts || {}).length : 0}
-        totalSlots={barcodeItemId ? (placedItems.find(i => i.id === barcodeItemId)?.type === 'helmet' ? 40 : 16) : 0}
+        totalSlots={barcodeItemId ? (() => { const t = placedItems.find(i => i.id === barcodeItemId)?.type; return t === 'helmet' ? 40 : t === 'jacket' ? 16 : 30; })() : 0}
       />
 
       {/* Product Modal */}

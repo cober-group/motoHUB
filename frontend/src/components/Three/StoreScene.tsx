@@ -41,7 +41,22 @@ export function StoreScene({
     if (!item) return null;
 
     if (item.type === 'central') {
-      return { position: item.position, rotation: item.rotation, isHidden: false };
+      const centralItems = placedItems.filter(i => i.type === 'central');
+      const centralIndex = centralItems.findIndex(ci => ci.id === id);
+      if (centralIndex === -1) return { position: item.position, rotation: item.rotation, isHidden: false };
+
+      const gondolaSpacingZ = 2.5;
+      const wallMarginZ = 1.8;
+      const availableZ = depth * 2 - wallMarginZ * 2;
+      const maxGondolas = Math.max(1, Math.floor(availableZ / gondolaSpacingZ) + 1);
+
+      if (centralIndex >= maxGondolas) {
+        return { position: item.position, rotation: item.rotation, isHidden: true };
+      }
+
+      const totalSpan = (maxGondolas - 1) * gondolaSpacingZ;
+      const zPos = -(totalSpan / 2) + centralIndex * gondolaSpacingZ;
+      return { position: [0, 0, zPos], rotation: [0, 0, 0], isHidden: false };
     }
 
     // Perimeter logic (helmet / jacket)
@@ -104,9 +119,13 @@ export function StoreScene({
       return [slotOffsets[idx], 0.8 + r * 1.5, 0];
     }
     if (type === 'central') {
-      const side = Math.floor(slotIndex / 6) === 0 ? -1 : 1;
-      const t = slotIndex % 6;
-      return [0, 0.4 + t * 0.6, side * 0.3];
+      const isBack = slotIndex >= 15;
+      const sideSlot = slotIndex % 15;
+      const shelfRow = Math.floor(sideSlot / 5);
+      const col = sideSlot % 5;
+      const xPos = ([-1.1, -0.55, 0, 0.55, 1.1] as const)[col];
+      const yPos = ([0.64, 1.14, 1.64] as const)[shelfRow];
+      return [xPos, yPos, isBack ? -0.32 : 0.32];
     }
     return [0, 0, 0];
   };
@@ -182,8 +201,8 @@ export function StoreScene({
           const isFocused = focusedItemId === item.id;
           const commonProps = {
             id: item.id,
-            position: placement.position,
-            rotation: placement.rotation,
+            position: placement.position as [number, number, number],
+            rotation: placement.rotation as [number, number, number],
             assignedProducts: item.assignedProducts || {},
             onUpdate: onUpdateItem,
             onRemove: onRemoveItem,
@@ -202,7 +221,7 @@ export function StoreScene({
             <group key={item.id} onClick={handleFocus}>
               {item.type === 'helmet' && <HelmetDisplay {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
               {item.type === 'jacket' && <JacketRail {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
-              {item.type === 'central' && <CentralShelf {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} />}
+              {item.type === 'central' && <CentralShelf {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'central')} />}
             </group>
           );
         })}
