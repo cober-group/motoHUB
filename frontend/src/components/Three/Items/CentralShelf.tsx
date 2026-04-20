@@ -59,7 +59,7 @@ function SlotGroup({
             transparent 
           />
           <Html position={[0, -0.03, isFront ? 0.12 : -0.12]} center distanceFactor={2.0}>
-            <div style={{ background: 'rgba(0,0,0,0.88)', padding: '2px 5px', borderRadius: '3px', textAlign: 'center', width: '62px', pointerEvents: 'none', transform: isFront ? 'none' : 'rotateY(180deg)' }}>
+            <div style={{ background: 'rgba(0,0,0,0.88)', padding: '2px 5px', borderRadius: '3px', textAlign: 'center', width: '62px', pointerEvents: 'none' }}>
               <p style={{ margin: 0, fontSize: '5px', fontWeight: 'bold', color: '#fff', lineHeight: 1.2, fontFamily: 'system-ui', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{assigned.name}</p>
               <p style={{ margin: '1px 0 0', fontSize: '5px', fontWeight: 'bold', color: '#c8ff1d', fontFamily: 'system-ui' }}>€{(assigned.list_price ?? 0).toFixed(0)}</p>
             </div>
