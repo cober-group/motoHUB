@@ -132,12 +132,12 @@ export function StoreScene({
       return [slotOffsets[idx], 0.8 + r * 1.5, 0];
     }
     if (type === 'central') {
-      const isBack = slotIndex >= 15;
-      const sideSlot = slotIndex % 15;
+      const isBack = slotIndex >= 20;
+      const sideSlot = slotIndex % 20;
       const shelfRow = Math.floor(sideSlot / 5);
       const col = sideSlot % 5;
       const xPos = ([-1.1, -0.55, 0, 0.55, 1.1] as const)[col];
-      const yPos = ([0.64, 1.14, 1.64] as const)[shelfRow];
+      const yPos = ([0.64, 1.14, 1.64, 2.14] as const)[shelfRow];
       return [xPos, yPos, isBack ? -0.32 : 0.32];
     }
     return [0, 0, 0];

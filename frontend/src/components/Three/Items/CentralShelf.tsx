@@ -190,7 +190,7 @@ export const CentralShelf = memo(function CentralShelf({
       )}
 
       <Text position={[0, 2.28, 0.05]} fontSize={0.11} color="#c8ff1d" fontWeight="bold" anchorX="center">
-        {`Isola Centrale  ${totalAssigned}/30`}
+        {`Isola Centrale  ${totalAssigned}/40`}
       </Text>
     </group>
   );

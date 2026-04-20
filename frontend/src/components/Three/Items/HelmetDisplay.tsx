@@ -104,7 +104,7 @@ export const HelmetDisplay = memo(function HelmetDisplay({
       })}
 
       <Text position={[0, 3.8, -0.4]} fontSize={0.15} color="#c8ff1d" fontWeight="bold">
-        Espositore caschi (40 unità)
+        Espositore caschi (30 unità)
       </Text>
     </group>
   );
