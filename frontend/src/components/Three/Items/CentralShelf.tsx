@@ -1,5 +1,6 @@
 import { Image, Html, Text } from '@react-three/drei';
 import { memo } from 'react';
+import { useProcessedImage } from '@/hooks/useProcessedImage';
 
 interface CentralShelfProps {
   id: string;
@@ -22,10 +23,6 @@ const SLOT_X = [-1.1, -0.55, 0, 0.55, 1.1] as const;
 const PRODUCT_Z_FRONT = 0.32;
 const PRODUCT_Z_BACK = -0.32;
 
-const getProductImage = (base64?: string) => {
-  if (!base64) return null;
-  return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
-};
 
 function SlotGroup({
   slotIndex, assigned, isEditable, isFocused, posZ,
@@ -36,7 +33,7 @@ function SlotGroup({
   onFocusProduct?: (id: string, s: number) => void;
   itemId: string;
 }) {
-  const imgSrc = assigned ? getProductImage(assigned.image_128) : null;
+  const { processedUrl } = useProcessedImage(assigned?.image_128);
   const isFront = posZ > 0;
 
   return (
@@ -55,14 +52,7 @@ function SlotGroup({
       )}
       {assigned ? (
         <>
-          {imgSrc ? (
-            <Image url={imgSrc} scale={0.3} position={[0, 0.18, isFront ? 0.02 : -0.02]} transparent />
-          ) : (
-            <mesh castShadow position={[0, 0.16, 0]}>
-              <boxGeometry args={[0.34, 0.3, 0.1]} />
-              <meshStandardMaterial color={isFront ? '#c8ff1d' : '#88aaff'} />
-            </mesh>
-          )}
+          <Image url={processedUrl} scale={0.3} position={[0, 0.18, isFront ? 0.02 : -0.02]} transparent />
           <Html position={[0, -0.03, isFront ? 0.12 : -0.12]} center distanceFactor={2.0}>
             <div style={{ background: 'rgba(0,0,0,0.88)', padding: '2px 5px', borderRadius: '3px', textAlign: 'center', width: '62px', pointerEvents: 'none' }}>
               <p style={{ margin: 0, fontSize: '5px', fontWeight: 'bold', color: '#fff', lineHeight: 1.2, fontFamily: 'system-ui', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{assigned.name}</p>

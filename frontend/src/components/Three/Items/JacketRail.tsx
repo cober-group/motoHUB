@@ -1,5 +1,6 @@
-import { Text, Image, Html } from '@react-three/drei';
+import { Text, Html } from '@react-three/drei';
 import { memo } from 'react';
+import { ProductImage } from './ProductImage';
 
 function getVariant(product: any): string {
   const dn: string = product.display_name || '';
@@ -25,10 +26,6 @@ interface JacketRailProps {
   onFocusProduct?: (itemId: string, slotIndex: number) => void;
 }
 
-const getProductImage = (base64?: string) => {
-  if (!base64) return null;
-  return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
-};
 
 export const JacketRail = memo(function JacketRail({ 
   id, position, rotation, assignedProducts, 
@@ -84,14 +81,7 @@ export const JacketRail = memo(function JacketRail({
                   )}
                   {assigned ? (
                     <group position={[0, -0.2, 0.1]}>
-                      {assigned.image_128 ? (
-                        <Image url={getProductImage(assigned.image_128) || ''} scale={0.7} position={[0, -0.3, 0.2]} transparent />
-                      ) : (
-                        <mesh castShadow>
-                          <boxGeometry args={[0.3, 0.5, 0.05]} />
-                          <meshStandardMaterial color="#c8ff1d" />
-                        </mesh>
-                      )}
+                      <ProductImage base64={assigned.image_128} scale={0.7} position={[0, -0.3, 0.2]} transparent />
                       <Html position={[0, -0.7, 0.35]} center distanceFactor={2.5}>
                         <div style={{ background: 'rgba(0,0,0,0.85)', padding: '4px 8px', borderRadius: '4px', textAlign: 'center', width: '90px', pointerEvents: 'none' }}>
                           <p style={{ margin: 0, fontSize: '6px', fontWeight: 'bold', color: '#fff', lineHeight: 1.2, fontFamily: 'system-ui' }}>{assigned.name}</p>

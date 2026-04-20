@@ -1,5 +1,6 @@
-import { Text, Image, Html } from '@react-three/drei';
+import { Text, Html } from '@react-three/drei';
 import { memo } from 'react';
+import { ProductImage } from './ProductImage';
 
 function getVariant(product: any): string {
   const dn: string = product.display_name || '';
@@ -25,10 +26,6 @@ interface HelmetDisplayProps {
   onFocusProduct?: (itemId: string, slotIndex: number) => void;
 }
 
-const getProductImage = (base64?: string) => {
-  if (!base64) return null;
-  return base64.startsWith('data:image') ? base64 : `data:image/png;base64,${base64}`;
-};
 
 export const HelmetDisplay = memo(function HelmetDisplay({ 
   id, position, rotation, assignedProducts, 
@@ -84,14 +81,7 @@ export const HelmetDisplay = memo(function HelmetDisplay({
                   )}
                   {assigned ? (
                     <group position={[0, 0.06, 0.1]}>
-                      {assigned.image_128 ? (
-                        <Image url={getProductImage(assigned.image_128) || ''} scale={0.22} position={[0, 0.2, 0.21]} transparent />
-                      ) : (
-                        <mesh position={[0, 0.15, 0]} castShadow>
-                          <sphereGeometry args={[0.12, 16, 16]} />
-                          <meshStandardMaterial color="#c8ff1d" roughness={0.1} metalness={0.8} />
-                        </mesh>
-                      )}
+                      <ProductImage base64={assigned.image_128} scale={0.22} position={[0, 0.2, 0.21]} transparent />
                       <Html position={[0, -0.02, 0.36]} center distanceFactor={1.8}>
                         <div style={{ background: 'rgba(0,0,0,0.85)', padding: '3px 6px', borderRadius: '3px', textAlign: 'center', width: '80px', pointerEvents: 'none' }}>
                           <p style={{ margin: 0, fontSize: '5px', fontWeight: 'bold', color: '#fff', lineHeight: 1.2, fontFamily: 'system-ui' }}>{assigned.name}</p>
