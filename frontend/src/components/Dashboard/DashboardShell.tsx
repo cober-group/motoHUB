@@ -151,6 +151,25 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
     setPlacedItems(prev => { const next = prev.map(i => i.id === id ? { ...i, position, rotation } : i); saveLayout(next); return next; });
   };
 
+  const reorderItem = (id: string, targetIndex: number) => {
+    setPlacedItems(prev => {
+      const wallItems = prev.filter(i => i.type === 'helmet' || i.type === 'jacket' || i.type === 'cash' || i.type === 'entrance');
+      const others = prev.filter(i => !(i.type === 'helmet' || i.type === 'jacket' || i.type === 'cash' || i.type === 'entrance'));
+
+      const currentIndex = wallItems.findIndex(i => i.id === id);
+      if (currentIndex === -1 || currentIndex === targetIndex) return prev;
+
+      const newWallItems = [...wallItems];
+      const [item] = newWallItems.splice(currentIndex, 1);
+      // Reset position/rotation to [0,0,0] to ensure it snaps back to rail logic
+      newWallItems.splice(targetIndex, 0, { ...item, position: [0, 0, 0], rotation: [0, 0, 0] });
+
+      const next = [...newWallItems, ...others];
+      saveLayout(next);
+      return next;
+    });
+  };
+
   const removeItem = (id: string) => {
     if (!canEditLayout) return;
     setPlacedItems(prev => { const next = prev.filter(i => i.id !== id); saveLayout(next); return next; });
@@ -438,6 +457,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
             onFocusItem={(id) => { setFocusedItemId(id); setFocusedProductIndex(null); }}
             onFocusProduct={handleProductFocus}
             onUpdateItem={updateItem}
+            onReorderItem={reorderItem}
             onRemoveItem={removeItem}
             onOpenSelector={handleOpenSelector}
             onOpenBarcodeScanner={handleOpenBarcodeScanner}

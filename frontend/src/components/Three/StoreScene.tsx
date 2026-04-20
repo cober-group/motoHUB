@@ -24,6 +24,7 @@ interface StoreSceneProps {
   onFocusItem: (id: string | null) => void;
   onFocusProduct: (itemId: string, slotIndex: number) => void;
   onUpdateItem: (id: string, pos: [number, number, number], rot: [number, number, number]) => void;
+  onReorderItem: (id: string, targetIndex: number) => void;
   onRemoveItem: (id: string) => void;
   onOpenSelector: (itemId: string, shelfIndex: number, type: 'helmet' | 'jacket' | 'central') => void;
   onOpenBarcodeScanner: (itemId: string, shelfIndex: number, type: 'helmet' | 'jacket' | 'central') => void;
@@ -33,7 +34,7 @@ export function StoreScene({
   placedItems, isEditMode, width, depth,
   focusedItemId, focusedProductIndex, exposedProducts,
   onFocusItem, onFocusProduct,
-  onUpdateItem, onRemoveItem, onOpenSelector, onOpenBarcodeScanner
+  onUpdateItem, onReorderItem, onRemoveItem, onOpenSelector, onOpenBarcodeScanner
 }: StoreSceneProps) {
   const controlsRef = useRef<CameraControls>(null);
   const lastMatrix = useRef<THREE.Matrix4>(new THREE.Matrix4());
@@ -282,22 +283,66 @@ export function StoreScene({
                     new THREE.Vector3(1, 1, 1)
                   )}
                   onDragStart={() => { if (controlsRef.current) controlsRef.current.enabled = false; }}
-                  onDrag={(l, deltaL, w) => { lastMatrix.current.copy(w); }}
+                  onDrag={(l, deltaL, w) => { 
+                    lastMatrix.current.copy(w); 
+                    
+                    // REAL-TIME RAIL SLIDING for wall items
+                    if (item.type !== 'central') {
+                      const pos = new THREE.Vector3().setFromMatrixPosition(w);
+                      
+                      const cornerMargin = 0.8, itemBodyWidth = 3.0, currentWallLength = 3.5;
+                      const availX = (width * 2) - 2 * cornerMargin;
+                      const availZ = (depth * 2) - 2 * cornerMargin;
+                      const slotsX = Math.max(1, Math.floor((availX - itemBodyWidth) / currentWallLength) + 1);
+                      const slotsZ = Math.max(1, Math.floor((availZ - itemBodyWidth) / currentWallLength) + 1);
+
+                      // 1. Identify closest wall
+                      const dists = [
+                        Math.abs(pos.x - (-width)), // Wall 0 (Left)
+                        Math.abs(pos.z - (-depth)), // Wall 1 (Top)
+                        Math.abs(pos.x - width),    // Wall 2 (Right)
+                        Math.abs(pos.z - depth)     // Wall 3 (Bottom)
+                      ];
+                      const wallIndex = dists.indexOf(Math.min(...dists));
+
+                      // 2. Identify index in wall based on coordinate along that wall
+                      let indexInWall = 0;
+                      if (wallIndex === 0) indexInWall = Math.round((pos.z / currentWallLength) + (slotsZ - 1) / 2);
+                      else if (wallIndex === 1) indexInWall = Math.round((pos.x / currentWallLength) + (slotsX - 1) / 2);
+                      else if (wallIndex === 2) indexInWall = Math.round((-pos.z / currentWallLength) + (slotsZ - 1) / 2);
+                      else if (wallIndex === 3) indexInWall = Math.round((-pos.x / currentWallLength) + (slotsX - 1) / 2);
+
+                      const wallSlotCount = (wallIndex === 0 || wallIndex === 2) ? slotsZ : slotsX;
+                      indexInWall = Math.max(0, Math.min(wallSlotCount - 1, indexInWall));
+
+                      // 3. Calculate target global index
+                      let targetGlobalIndex = indexInWall;
+                      if (wallIndex === 1) targetGlobalIndex += slotsZ;
+                      else if (wallIndex === 2) targetGlobalIndex += (slotsZ + slotsX);
+                      else if (wallIndex === 3) targetGlobalIndex += (slotsZ * 2 + slotsX);
+
+                      const wallItems = placedItems.filter(i => i.type !== 'central');
+                      const currentGlobalIndex = wallItems.findIndex(wi => wi.id === item.id);
+
+                      if (currentGlobalIndex !== -1 && currentGlobalIndex !== targetGlobalIndex) {
+                        onReorderItem(item.id, targetGlobalIndex);
+                      }
+                    }
+                  }}
                   onDragEnd={() => {
                     if (controlsRef.current) controlsRef.current.enabled = true;
-                    const pos = new THREE.Vector3();
-                    const quat = new THREE.Quaternion();
-                    const scale = new THREE.Vector3();
-                    lastMatrix.current.decompose(pos, quat, scale);
-                    const rot = new THREE.Euler().setFromQuaternion(quat);
+                    if (item.type === 'central') {
+                      const pos = new THREE.Vector3();
+                      const quat = new THREE.Quaternion();
+                      const scale = new THREE.Vector3();
+                      lastMatrix.current.decompose(pos, quat, scale);
+                      const rot = new THREE.Euler().setFromQuaternion(quat);
 
-                    // CLAMPING: Keep items inside room limits [-width, +width] and [-depth, +depth]
-                    // We add a 0.5m margin for safety from walls
-                    const margin = 0.5;
-                    const clampedX = Math.max(-width + margin, Math.min(width - margin, pos.x));
-                    const clampedZ = Math.max(-depth + margin, Math.min(depth - margin, pos.z));
-
-                    onUpdateItem(item.id, [clampedX, 0, clampedZ], [0, rot.y, 0]);
+                      const margin = 0.5;
+                      const clampedX = Math.max(-width + margin, Math.min(width - margin, pos.x));
+                      const clampedZ = Math.max(-depth + margin, Math.min(depth - margin, pos.z));
+                      onUpdateItem(item.id, [clampedX, 0, clampedZ], [0, rot.y, 0]);
+                    }
                   }}
                 >
                   {renderItemContent({ position: [0, 0, 0], rotation: [0, 0, 0] })}
