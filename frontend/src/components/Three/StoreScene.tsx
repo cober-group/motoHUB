@@ -250,15 +250,22 @@ export function StoreScene({
             onFocusItem(item.id);
           };
 
-          const renderItemContent = () => (
-            <>
-              {item.type === 'helmet' && <HelmetDisplay {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
-              {item.type === 'jacket' && <JacketRail {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
-              {item.type === 'central' && <CentralShelf {...commonProps} gondolaWidth={Math.min(3.0, Math.max(1.5, width * 2 - 4.26))} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'central')} />}
-              {item.type === 'cash' && <CashCounter {...commonProps} />}
-              {item.type === 'entrance' && <Entrance {...commonProps} />}
-            </>
-          );
+          const renderItemContent = (overrides?: { position?: [number, number, number], rotation?: [number, number, number] }) => {
+            const props = {
+              ...commonProps,
+              position: overrides?.position ?? commonProps.position,
+              rotation: overrides?.rotation ?? commonProps.rotation,
+            };
+            return (
+              <>
+                {item.type === 'helmet' && <HelmetDisplay {...props} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
+                {item.type === 'jacket' && <JacketRail {...props} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
+                {item.type === 'central' && <CentralShelf {...props} gondolaWidth={Math.min(3.0, Math.max(1.5, width * 2 - 4.26))} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'central')} />}
+                {item.type === 'cash' && <CashCounter {...props} />}
+                {item.type === 'entrance' && <Entrance {...props} />}
+              </>
+            );
+          };
 
           return (
             <group key={item.id} onClick={handleFocus}>
@@ -269,21 +276,31 @@ export function StoreScene({
                   scale={60}
                   lineWidth={2}
                   anchor={[0, 0, 0]}
+                  matrix={new THREE.Matrix4().compose(
+                    new THREE.Vector3(...placement.position),
+                    new THREE.Quaternion().setFromEuler(new THREE.Euler(...placement.rotation)),
+                    new THREE.Vector3(1, 1, 1)
+                  )}
                   onDragStart={() => { if (controlsRef.current) controlsRef.current.enabled = false; }}
                   onDrag={(l, deltaL, w) => { lastMatrix.current.copy(w); }}
                   onDragEnd={() => {
                     if (controlsRef.current) controlsRef.current.enabled = true;
-                    // Extract position and rotation from the captured world matrix
                     const pos = new THREE.Vector3();
                     const quat = new THREE.Quaternion();
                     const scale = new THREE.Vector3();
                     lastMatrix.current.decompose(pos, quat, scale);
                     const rot = new THREE.Euler().setFromQuaternion(quat);
-                    // Simplified rotation save: only Y axis for furniture usually
-                    onUpdateItem(item.id, [pos.x, 0, pos.z], [0, rot.y, 0]);
+
+                    // CLAMPING: Keep items inside room limits [-width, +width] and [-depth, +depth]
+                    // We add a 0.5m margin for safety from walls
+                    const margin = 0.5;
+                    const clampedX = Math.max(-width + margin, Math.min(width - margin, pos.x));
+                    const clampedZ = Math.max(-depth + margin, Math.min(depth - margin, pos.z));
+
+                    onUpdateItem(item.id, [clampedX, 0, clampedZ], [0, rot.y, 0]);
                   }}
                 >
-                  {renderItemContent()}
+                  {renderItemContent({ position: [0, 0, 0], rotation: [0, 0, 0] })}
                 </PivotControls>
               ) : (
                 renderItemContent()
