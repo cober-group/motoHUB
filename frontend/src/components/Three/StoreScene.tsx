@@ -272,7 +272,7 @@ export function StoreScene({
             <group key={item.id} onClick={handleFocus}>
               {isEditMode && isFocused ? (
                 <PivotControls
-                  activeAxes={[true, false, true, false, true, false]} // [x, y, z, rx, ry, rz]
+                  activeAxes={[true, false, true, false, true, false] as any}
                   rotationLimits={[0, 0, 0]} // Not used with activeAxes but good practice
                   depthTest={false}
                   fixed={true}
