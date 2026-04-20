@@ -43,6 +43,7 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
   const [creatingStore, setCreatingStore] = useState(false);
 
   // Create user form
+  const [editNames, setEditNames] = useState<Record<number, string>>({});
   const [newUser, setNewUser] = useState<Record<number, { email: string; password: string; is_editor: boolean }>>({});
   const [creatingUser, setCreatingUser] = useState<number | null>(null);
 
@@ -71,10 +72,15 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
     setStoreUsers(prev => ({ ...prev, [storeId]: users }));
   };
 
-  const toggleExpand = async (storeId: number) => {
-    if (expandedStore === storeId) { setExpandedStore(null); return; }
-    setExpandedStore(storeId);
-    await loadUsers(storeId);
+  const toggleExpand = (id: number) => {
+    if (expandedStore === id) {
+      setExpandedStore(null);
+    } else {
+      setExpandedStore(id);
+      const s = stores.find(st => st.id === id);
+      if (s) setEditNames(p => ({ ...p, [id]: s.name }));
+      loadUsers(id);
+    }
   };
 
   const handleCreateStore = async () => {
@@ -97,6 +103,20 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
     if (!confirm('⚠️ OPERAZIONE IRREVERSIBILE! Sei davvero sicuro di voler procedere con l\'eliminazione definitiva?')) return;
     await apiFetch(`/api/stores/${storeId}`, { method: 'DELETE' });
     await loadStores();
+  };
+
+  const handleRenameStore = async (storeId: number) => {
+    const newName = editNames[storeId];
+    if (!newName) return;
+    try {
+      await apiFetch(`/api/stores/${storeId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: newName })
+      });
+      await loadStores();
+    } catch (err: any) {
+      alert('Errore rinominando: ' + err.message);
+    }
   };
 
   const handleCloneStore = async (storeId: number) => {
@@ -201,6 +221,19 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
 
           {expandedStore === store.id && (
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+
+              {/* Rename Store */}
+              <div style={{ marginBottom: '20px' }}>
+                <p style={{ ...S.label, marginBottom: '8px' }}>RINOMINA NEGOZIO</p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    style={{ ...S.input, flex: 1 }}
+                    value={editNames[store.id] || ''}
+                    onChange={e => setEditNames(p => ({ ...p, [store.id]: e.target.value }))}
+                  />
+                  <button style={S.btnGreen} onClick={() => handleRenameStore(store.id)}>SALVA NOME</button>
+                </div>
+              </div>
 
               {/* Chat */}
               <div style={{ marginBottom: '16px' }}>
