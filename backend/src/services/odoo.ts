@@ -161,6 +161,36 @@ export class OdooService {
     return this.execute('product.product', 'search_read', [domain], kwargs);
   }
 
+  async getProductStats(productId: number, locationId?: number) {
+    // Fetch cost price and base data
+    const [detail] = await this.execute('product.product', 'read', [[productId]], {
+      fields: ['name', 'display_name', 'list_price', 'standard_price', 'qty_available', 'sales_count', 'default_code', 'barcode'],
+      context: locationId ? { location: locationId } : {},
+    });
+
+    // Sales in last 30 and 90 days
+    const now = new Date();
+    const d30 = new Date(now); d30.setDate(d30.getDate() - 30);
+    const d90 = new Date(now); d90.setDate(d90.getDate() - 90);
+    const fmt = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+
+    const [lines30, lines90] = await Promise.all([
+      this.execute('sale.order.line', 'search_read',
+        [[['product_id', '=', productId], ['order_id.state', 'in', ['sale', 'done']], ['order_id.date_order', '>=', fmt(d30)]]],
+        { fields: ['product_uom_qty'], limit: 500 }
+      ),
+      this.execute('sale.order.line', 'search_read',
+        [[['product_id', '=', productId], ['order_id.state', 'in', ['sale', 'done']], ['order_id.date_order', '>=', fmt(d90)]]],
+        { fields: ['product_uom_qty'], limit: 500 }
+      ),
+    ]);
+
+    const sold30 = lines30.reduce((s: number, l: any) => s + (l.product_uom_qty || 0), 0);
+    const sold90 = lines90.reduce((s: number, l: any) => s + (l.product_uom_qty || 0), 0);
+
+    return { ...detail, sold30, sold90 };
+  }
+
   async getProductByBarcode(barcode: string, locationId?: number) {
     const domain: any[] = [
       ['sale_ok', '=', true],

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { StoreScene } from '@/components/Three/StoreScene';
 import { ProductModal } from '@/components/UI/ProductModal';
 import { BarcodeModal } from '@/components/UI/BarcodeModal';
+import { StoreChat } from '@/components/UI/StoreChat';
 import { useAuth, useApiFetch } from '@/context/AuthContext';
 import { PlacedItem } from '@/types/store';
 
@@ -26,8 +27,8 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const router = useRouter();
 
   const isAdmin = role === 'admin';
-  // store users can edit furniture/products but NOT dimensions
-  const canEditLayout = !visitMode;
+  const isEditor = isAdmin || (user?.isEditor !== false);
+  const canEditLayout = !visitMode && isEditor;
   const canEditDimensions = isAdmin && !visitMode;
 
   const resolvedStoreId = storeId ?? user?.storeId ?? null;
@@ -40,6 +41,8 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const [placedItems, setPlacedItems] = useState<PlacedItem[]>([]);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [focusedProductIndex, setFocusedProductIndex] = useState<number | null>(null);
+  const [productStats, setProductStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [layoutLoading, setLayoutLoading] = useState(true);
 
   const exposedProducts = useMemo(() => {
@@ -89,6 +92,19 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
     if (!token) { router.replace('/login'); return; }
     setMounted(true);
   }, [token, router]);
+
+  // ── Fetch product stats when focused product changes ──────────
+  useEffect(() => {
+    if (focusedProductIndex === null) { setProductStats(null); return; }
+    const product = exposedProducts[focusedProductIndex]?.product;
+    if (!product?.id) return;
+    setStatsLoading(true);
+    setProductStats(null);
+    apiFetch(`/api/odoo/product/${product.id}/stats`)
+      .then(r => r.json())
+      .then(data => { setProductStats(data.stats); setStatsLoading(false); })
+      .catch(() => setStatsLoading(false));
+  }, [focusedProductIndex]);
 
   // ── Load layout from API ──────────────────────────────────────
   useEffect(() => {
@@ -269,23 +285,6 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const wallItems = placedItems.filter(i => i.type === 'helmet' || i.type === 'jacket').length;
   const isFurnitureOverflowing = wallItems >= maxFurnitureSlots;
 
-  // Chart Helper
-  const renderSparkline = (id: string) => {
-    // Generate deterministic random-ish path based on id
-    const points = [];
-    let seed = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    for (let i = 0; i < 7; i++) {
-      seed = (seed * 9301 + 49297) % 233280;
-      points.push(seed / 233280);
-    }
-    const path = points.map((p, i) => `${i * 15},${30 - p * 25}`).join(' L ');
-    return (
-      <svg width="105" height="35" viewBox="0 0 90 30" style={{ filter: 'drop-shadow(0 0 4px #c8ff1d)' }}>
-        <path d={`M 0,${30 - points[0] * 25} L ${path}`} fill="none" stroke="#c8ff1d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  };
-
   const currentFocusedProduct = focusedProductIndex !== null ? exposedProducts[focusedProductIndex] : null;
 
   return (
@@ -371,6 +370,16 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
             🗑️ SVUOTA NEGOZIO
           </button>
         )}
+
+        {/* Chat */}
+        {resolvedStoreId && (
+          <StoreChat
+            storeId={resolvedStoreId}
+            storeName={storeName}
+            currentRole={role}
+            apiFetch={apiFetch}
+          />
+        )}
       </div>
 
       {/* ── 3D Scene (fills remaining space) ── */}
@@ -424,35 +433,104 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
             </button>
 
             {/* Analytics Card */}
-            <div style={{ position: 'absolute', top: '30px', right: '30px', width: '320px', background: 'rgba(26,26,26,0.85)', backdropFilter: 'blur(20px)', border: '1px solid rgba(200,255,29,0.2)', borderRadius: '24px', padding: '24px', zIndex: 120, boxShadow: '0 20px 40px rgba(0,0,0,0.4)', color: '#fff', pointerEvents: 'none' }}>
-              <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
-                <div style={{ width: '80px', height: '80px', background: '#111', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  {currentFocusedProduct.product.image_128 ? <img src={currentFocusedProduct.product.image_128.startsWith('data') ? currentFocusedProduct.product.image_128 : `data:image/png;base64,${currentFocusedProduct.product.image_128}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : '📦'}
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>{currentFocusedProduct.product.name}</h3>
-                  <p style={{ margin: '4px 0', color: '#c8ff1d', fontWeight: 700 }}>€{(currentFocusedProduct.product.list_price ?? 0).toFixed(2)}</p>
-                  <span style={{ fontSize: '0.65rem', color: '#555', letterSpacing: '1px' }}>ID: {currentFocusedProduct.product.default_code || 'N/A'}</span>
-                </div>
-              </div>
+            {(() => {
+              const p = currentFocusedProduct.product;
+              const s = productStats;
+              const price = p.list_price ?? 0;
+              const cost = s?.standard_price ?? 0;
+              const qty = s?.qty_available ?? p.qty_available ?? 0;
+              const sold30 = s?.sold30 ?? 0;
+              const sold90 = s?.sold90 ?? 0;
+              const margin = cost > 0 ? ((price - cost) / price * 100) : null;
+              const stockValue = qty * cost;
+              const dailyRate = sold90 / 90;
+              const coverageDays = dailyRate > 0 ? Math.round(qty / dailyRate) : null;
+              const abcClass = sold90 > 20 ? 'A' : sold90 > 5 ? 'B' : 'C';
+              const abcColor = abcClass === 'A' ? '#c8ff1d' : abcClass === 'B' ? '#ffaa00' : '#888';
+              const imgSrc = p.image_128 ? (p.image_128.startsWith('data') ? p.image_128 : `data:image/png;base64,${p.image_128}`) : null;
+              const variant = (() => { const dn = p.display_name || ''; const rest = dn.slice((p.name || '').length).trim(); return rest.startsWith('(') && rest.endsWith(')') ? rest.slice(1, -1) : rest; })();
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <p style={{ margin: 0, color: '#888', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '1px' }}>PEZZI VENDUTI</p>
-                  <p style={{ margin: 0, fontSize: '2rem', fontWeight: 900, color: '#fff' }}>{currentFocusedProduct.product.sales_count || 0}</p>
+              return (
+                <div style={{ position: 'absolute', top: '24px', right: '24px', width: '300px', background: 'rgba(18,18,18,0.92)', backdropFilter: 'blur(24px)', border: '1px solid rgba(200,255,29,0.15)', borderRadius: '20px', zIndex: 120, boxShadow: '0 24px 48px rgba(0,0,0,0.5)', color: '#fff', pointerEvents: 'none', overflow: 'hidden' }}>
+
+                  {/* Header */}
+                  <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    <div style={{ width: '64px', height: '64px', background: '#111', borderRadius: '10px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(255,255,255,0.08)' }}>
+                      {imgSrc ? <img src={imgSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '1.6rem' }}>📦</span>}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.3 }}>{p.name}</p>
+                      {variant && <p style={{ margin: '2px 0', color: '#88aaff', fontSize: '0.72rem' }}>{variant}</p>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                        <span style={{ color: '#c8ff1d', fontWeight: 800, fontSize: '1rem' }}>€{price.toFixed(2)}</span>
+                        <span style={{ background: abcColor, color: '#000', fontSize: '0.6rem', fontWeight: 900, padding: '1px 6px', borderRadius: '4px' }}>CLASSE {abcClass}</span>
+                      </div>
+                      {p.default_code && <p style={{ margin: '2px 0 0', color: '#444', fontSize: '0.62rem', letterSpacing: '0.5px' }}>SKU: {p.default_code}</p>}
+                    </div>
+                  </div>
+
+                  {statsLoading ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#555', fontSize: '0.8rem' }}>
+                      <div style={{ width: '20px', height: '20px', border: '2px solid #c8ff1d', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
+                      Caricamento statistiche...
+                    </div>
+                  ) : (
+                    <>
+                      {/* KPI grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        {[
+                          { label: 'GIACENZA', value: `${qty} pz`, color: qty < 3 ? '#ff6666' : '#fff' },
+                          { label: 'MARGINE', value: margin !== null ? `${margin.toFixed(0)}%` : '—', color: margin !== null && margin > 30 ? '#c8ff1d' : margin !== null && margin > 15 ? '#ffaa00' : '#ff6666' },
+                          { label: 'COSTO', value: cost > 0 ? `€${cost.toFixed(0)}` : '—', color: '#888' },
+                        ].map(k => (
+                          <div key={k.label} style={{ padding: '10px 8px', background: 'rgba(0,0,0,0.3)', textAlign: 'center' }}>
+                            <p style={{ margin: 0, fontSize: '0.55rem', color: '#555', fontWeight: 700, letterSpacing: '0.5px' }}>{k.label}</p>
+                            <p style={{ margin: '2px 0 0', fontSize: '0.9rem', fontWeight: 800, color: k.color }}>{k.value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Sales */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        {[
+                          { label: 'VENDUTO 30gg', value: `${sold30} pz`, sub: sold30 > 0 ? `≈ ${(sold30 / 30).toFixed(1)}/gg` : 'nessuna vendita' },
+                          { label: 'VENDUTO 90gg', value: `${sold90} pz`, sub: sold90 > 0 ? `≈ ${(sold90 / 90).toFixed(1)}/gg` : 'nessuna vendita' },
+                        ].map(k => (
+                          <div key={k.label} style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.3)' }}>
+                            <p style={{ margin: 0, fontSize: '0.55rem', color: '#555', fontWeight: 700, letterSpacing: '0.5px' }}>{k.label}</p>
+                            <p style={{ margin: '2px 0 0', fontSize: '1rem', fontWeight: 800, color: '#fff' }}>{k.value}</p>
+                            <p style={{ margin: 0, fontSize: '0.62rem', color: '#666' }}>{k.sub}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Bottom row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        {[
+                          { label: 'GIORNI SCORTA', value: coverageDays !== null ? `${coverageDays}gg` : '∞', color: coverageDays !== null && coverageDays < 14 ? '#ff6666' : coverageDays !== null && coverageDays < 30 ? '#ffaa00' : '#c8ff1d' },
+                          { label: 'VALORE STOCK', value: stockValue > 0 ? `€${stockValue.toFixed(0)}` : '—', color: '#fff' },
+                        ].map(k => (
+                          <div key={k.label} style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.3)' }}>
+                            <p style={{ margin: 0, fontSize: '0.55rem', color: '#555', fontWeight: 700, letterSpacing: '0.5px' }}>{k.label}</p>
+                            <p style={{ margin: '2px 0 0', fontSize: '1rem', fontWeight: 800, color: k.color }}>{k.value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Insight */}
+                      <div style={{ padding: '10px 14px' }}>
+                        {qty < 3 && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#ff6666' }}>⚠ Scorta critica — considera il riordino</p>}
+                        {coverageDays !== null && coverageDays < 14 && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#ffaa00' }}>⏱ Copertura &lt; 2 settimane</p>}
+                        {abcClass === 'A' && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#c8ff1d' }}>⭐ Top performer — posizione privilegiata consigliata</p>}
+                        {abcClass === 'C' && sold90 === 0 && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#888' }}>💤 Nessuna vendita negli ultimi 90 giorni</p>}
+                        {margin !== null && margin < 15 && <p style={{ margin: 0, fontSize: '0.72rem', color: '#ff9966' }}>📉 Margine basso — verifica il prezzo</p>}
+                        {qty >= 3 && abcClass !== 'C' && coverageDays === null || (coverageDays !== null && coverageDays >= 30 && qty >= 3 && abcClass !== 'A') ? <p style={{ margin: 0, fontSize: '0.72rem', color: '#888' }}>✓ Situazione nella norma</p> : null}
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ margin: '0 0 6px', color: '#c8ff1d', fontSize: '0.65rem', fontWeight: 800 }}>TREND 7gg</p>
-                  {renderSparkline(currentFocusedProduct.product.id?.toString() || '0')}
-                </div>
-              </div>
-              
-              <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(200,255,29,0.06)', borderRadius: '12px', border: '1px solid rgba(200,255,29,0.1)' }}>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: '#c8ff1d', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.2rem' }}>📈</span> Suggerimento: Performance sopra la media
-                </p>
-              </div>
-            </div>
+              );
+            })()}
           </>
         )}
       </div>

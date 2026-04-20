@@ -34,6 +34,23 @@ export async function initDb() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id           SERIAL PRIMARY KEY,
+      store_id     INTEGER REFERENCES stores(id) ON DELETE CASCADE NOT NULL,
+      sender_role  VARCHAR(10) NOT NULL CHECK (sender_role IN ('admin', 'store')),
+      sender_email VARCHAR(255),
+      content      TEXT NOT NULL,
+      read_at      TIMESTAMP,
+      created_at   TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_messages_store ON messages(store_id, created_at DESC);
+  `);
+
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_editor BOOLEAN DEFAULT true;
+  `);
+
   // Safe migrations for new columns
   await pool.query(`
     ALTER TABLE layouts ADD COLUMN IF NOT EXISTS width_m NUMERIC DEFAULT 15;

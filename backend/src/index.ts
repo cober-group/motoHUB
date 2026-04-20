@@ -7,6 +7,7 @@ import { initDb, pool } from './db';
 import authRouter from './routes/auth';
 import storesRouter from './routes/stores';
 import layoutsRouter from './routes/layouts';
+import messagesRouter from './routes/messages';
 import { authMiddleware } from './middleware/auth';
 
 dotenv.config();
@@ -36,6 +37,9 @@ app.use('/api/stores', storesRouter);
 
 // ── Layouts (per store, in DB) ────────────────────────────────────
 app.use('/api/stores', layoutsRouter);
+
+// ── Messages (chat admin ↔ store) ─────────────────────────────────────
+app.use('/api/stores', messagesRouter);
 
 // ── Odoo: init ───────────────────────────────────────────────────
 app.get('/api/odoo/init', authMiddleware, async (req: any, res: any) => {
@@ -75,6 +79,30 @@ app.get('/api/odoo/products', authMiddleware, async (req: any, res: any) => {
       locationId
     );
     res.json({ products });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Odoo: product stats ───────────────────────────────────────────────
+app.get('/api/odoo/product/:id/stats', authMiddleware, async (req: any, res: any) => {
+  const productId = parseInt(req.params.id);
+  if (isNaN(productId)) return res.status(400).json({ error: 'ID non valido' });
+
+  let locationId: number | undefined;
+  if (req.user.storeId) {
+    if (!locationCache.has(req.user.storeId)) {
+      try {
+        const { rows } = await pool.query(`SELECT odoo_location_id FROM stores WHERE id = $1`, [req.user.storeId]);
+        locationCache.set(req.user.storeId, rows[0]?.odoo_location_id ?? null);
+      } catch { locationCache.set(req.user.storeId, null); }
+    }
+    locationId = locationCache.get(req.user.storeId) ?? undefined;
+  }
+
+  try {
+    const stats = await odoo.getProductStats(productId, locationId);
+    res.json({ stats });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

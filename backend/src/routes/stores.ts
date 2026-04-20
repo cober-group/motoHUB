@@ -76,7 +76,7 @@ router.delete('/:id', adminOnly, async (req: any, res: any) => {
 router.get('/:id/users', adminOnly, async (req: any, res: any) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, email, role, created_at FROM users WHERE store_id = $1`,
+      `SELECT id, email, role, is_editor, created_at FROM users WHERE store_id = $1`,
       [req.params.id]
     );
     res.json(rows);
@@ -87,17 +87,33 @@ router.get('/:id/users', adminOnly, async (req: any, res: any) => {
 
 // POST /api/stores/:id/users — admin crea utente negozio
 router.post('/:id/users', adminOnly, async (req: any, res: any) => {
-  const { email, password } = req.body;
+  const { email, password, is_editor = true } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email e password obbligatori' });
   try {
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
-      `INSERT INTO users (email, password_hash, role, store_id) VALUES ($1, $2, 'store', $3) RETURNING id, email, role, store_id`,
-      [email.toLowerCase().trim(), hash, req.params.id]
+      `INSERT INTO users (email, password_hash, role, store_id, is_editor) VALUES ($1, $2, 'store', $3, $4) RETURNING id, email, role, store_id, is_editor`,
+      [email.toLowerCase().trim(), hash, req.params.id, is_editor]
     );
     res.status(201).json(rows[0]);
   } catch (err: any) {
     if (err.code === '23505') return res.status(409).json({ error: 'Email già in uso' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/stores/:storeId/users/:userId/editor — toggle permesso editor
+router.patch('/:storeId/users/:userId/editor', adminOnly, async (req: any, res: any) => {
+  const { is_editor } = req.body;
+  if (typeof is_editor !== 'boolean') return res.status(400).json({ error: 'is_editor deve essere boolean' });
+  try {
+    const { rows } = await pool.query(
+      `UPDATE users SET is_editor = $1 WHERE id = $2 AND store_id = $3 RETURNING id, email, role, is_editor`,
+      [is_editor, req.params.userId, req.params.storeId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Utente non trovato' });
+    res.json(rows[0]);
+  } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });

@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string;
   role: 'admin' | 'store';
   storeId: number | null;
+  isEditor?: boolean;
   store_name?: string;
   sqm?: number;
 }
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: data.email,
         role: data.role,
         storeId: data.store_id ?? data.storeId ?? null,
+        isEditor: data.isEditor ?? data.is_editor ?? true,
         store_name: data.store_name,
         sqm: data.sqm,
       });

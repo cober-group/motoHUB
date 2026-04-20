@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useApiFetch } from '@/context/AuthContext';
+import { StoreChat } from '@/components/UI/StoreChat';
 
 interface Store {
   id: number;
@@ -15,6 +16,7 @@ interface StoreUser {
   id: number;
   email: string;
   role: string;
+  is_editor: boolean;
   created_at: string;
 }
 
@@ -41,7 +43,7 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
   const [creatingStore, setCreatingStore] = useState(false);
 
   // Create user form
-  const [newUser, setNewUser] = useState<Record<number, { email: string; password: string }>>({});
+  const [newUser, setNewUser] = useState<Record<number, { email: string; password: string; is_editor: boolean }>>({});
   const [creatingUser, setCreatingUser] = useState<number | null>(null);
 
   const loadStores = useCallback(async () => {
@@ -106,7 +108,7 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
         body: JSON.stringify(u),
       });
       if (!res.ok) { const e = await res.json(); alert(e.error); return; }
-      setNewUser(prev => ({ ...prev, [storeId]: { email: '', password: '' } }));
+      setNewUser(prev => ({ ...prev, [storeId]: { email: '', password: '', is_editor: true } }));
       await loadUsers(storeId);
     } finally {
       setCreatingUser(null);
@@ -116,6 +118,14 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
   const handleDeleteUser = async (storeId: number, userId: number) => {
     if (!confirm('Eliminare questo utente?')) return;
     await apiFetch(`/api/stores/${storeId}/users/${userId}`, { method: 'DELETE' });
+    await loadUsers(storeId);
+  };
+
+  const handleToggleEditor = async (storeId: number, userId: number, current: boolean) => {
+    await apiFetch(`/api/stores/${storeId}/users/${userId}/editor`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_editor: !current }),
+    });
     await loadUsers(storeId);
   };
 
@@ -179,32 +189,67 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
 
           {expandedStore === store.id && (
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+
+              {/* Chat */}
+              <div style={{ marginBottom: '16px' }}>
+                <StoreChat
+                  storeId={store.id}
+                  storeName={store.name}
+                  currentRole="admin"
+                  apiFetch={apiFetch}
+                />
+              </div>
+
               <p style={{ ...S.label, marginBottom: '12px' }}>UTENTI NEGOZIO</p>
 
               {(storeUsers[store.id] || []).map(u => (
-                <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#222', borderRadius: '8px', marginBottom: '6px' }}>
-                  <span style={{ color: '#ccc', fontSize: '0.85rem' }}>{u.email}</span>
+                <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#222', borderRadius: '8px', marginBottom: '6px', gap: '8px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ color: '#ccc', fontSize: '0.85rem' }}>{u.email}</span>
+                    <span style={{ marginLeft: '8px', fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: u.is_editor ? 'rgba(200,255,29,0.1)' : 'rgba(255,100,100,0.1)', color: u.is_editor ? '#c8ff1d' : '#ff6666', border: `1px solid ${u.is_editor ? 'rgba(200,255,29,0.3)' : 'rgba(255,100,100,0.3)'}` }}>
+                      {u.is_editor ? 'EDITOR' : 'SOLA LETTURA'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleToggleEditor(store.id, u.id, u.is_editor)}
+                    style={{ padding: '4px 10px', background: 'rgba(255,255,255,0.05)', color: '#aaa', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.7rem', whiteSpace: 'nowrap' }}
+                  >
+                    {u.is_editor ? '🔒 Rimuovi editor' : '✏️ Rendi editor'}
+                  </button>
                   <button style={S.btnRed} onClick={() => handleDeleteUser(store.id, u.id)}>×</button>
                 </div>
               ))}
 
               {/* Add user */}
-              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                <input
-                  style={{ ...S.input, flex: 2 }}
-                  placeholder="email@negozio.it"
-                  value={newUser[store.id]?.email || ''}
-                  onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], email: e.target.value } }))}
-                />
-                <input
-                  style={{ ...S.input, flex: 1 }}
-                  type="password" placeholder="Password"
-                  value={newUser[store.id]?.password || ''}
-                  onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], password: e.target.value } }))}
-                />
-                <button style={{ ...S.btnGreen, opacity: creatingUser === store.id ? 0.6 : 1 }} onClick={() => handleCreateUser(store.id)} disabled={creatingUser === store.id}>
-                  + UTENTE
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    style={{ ...S.input, flex: 2 }}
+                    placeholder="email@negozio.it"
+                    value={newUser[store.id]?.email || ''}
+                    onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], email: e.target.value, is_editor: p[store.id]?.is_editor ?? true } }))}
+                  />
+                  <input
+                    style={{ ...S.input, flex: 1 }}
+                    type="password" placeholder="Password"
+                    value={newUser[store.id]?.password || ''}
+                    onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], password: e.target.value, is_editor: p[store.id]?.is_editor ?? true } }))}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={newUser[store.id]?.is_editor ?? true}
+                      onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], email: p[store.id]?.email || '', password: p[store.id]?.password || '', is_editor: e.target.checked } }))}
+                      style={{ accentColor: '#c8ff1d', width: '14px', height: '14px', cursor: 'pointer' }}
+                    />
+                    <span style={{ color: '#aaa', fontSize: '0.78rem' }}>Permesso editor (può modificare il layout)</span>
+                  </label>
+                  <button style={{ ...S.btnGreen, opacity: creatingUser === store.id ? 0.6 : 1 }} onClick={() => handleCreateUser(store.id)} disabled={creatingUser === store.id}>
+                    + UTENTE
+                  </button>
+                </div>
               </div>
             </div>
           )}
