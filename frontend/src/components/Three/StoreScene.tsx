@@ -272,6 +272,8 @@ export function StoreScene({
             <group key={item.id} onClick={handleFocus}>
               {isEditMode && isFocused ? (
                 <PivotControls
+                  activeAxes={[true, false, true, false, true, false]} // [x, y, z, rx, ry, rz]
+                  rotationLimits={[0, 0, 0]} // Not used with activeAxes but good practice
                   depthTest={false}
                   fixed={true}
                   scale={60}
@@ -338,10 +340,15 @@ export function StoreScene({
                       lastMatrix.current.decompose(pos, quat, scale);
                       const rot = new THREE.Euler().setFromQuaternion(quat);
 
+                      // SNAP ROTATION to 90 degree increments
+                      const snap = Math.PI / 2;
+                      const snappedRotY = Math.round(rot.y / snap) * snap;
+
+                      // CLAMPING: Keep items inside room limits [-width, +width] and [-depth, +depth]
                       const margin = 0.5;
                       const clampedX = Math.max(-width + margin, Math.min(width - margin, pos.x));
                       const clampedZ = Math.max(-depth + margin, Math.min(depth - margin, pos.z));
-                      onUpdateItem(item.id, [clampedX, 0, clampedZ], [0, rot.y, 0]);
+                      onUpdateItem(item.id, [clampedX, 0, clampedZ], [0, snappedRotY, 0]);
                     }
                   }}
                 >
