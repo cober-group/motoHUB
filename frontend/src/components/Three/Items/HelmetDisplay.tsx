@@ -52,7 +52,7 @@ export const HelmetDisplay = memo(function HelmetDisplay({
         <meshStandardMaterial color="#2a2a2a" roughness={0.8} />
       </mesh>
 
-      {[0, 1, 2, 3, 4, 5, 6, 7].map((s) => {
+      {[0, 1, 2, 3, 4, 5].map((s) => {
         const shelfOffsets = [-1.1, -0.55, 0, 0.55, 1.1];
         return (
           <group key={s} position={[0, 0.3 + s * 0.42, -0.2]}>

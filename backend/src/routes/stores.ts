@@ -80,7 +80,7 @@ router.post('/:id/clone', adminOnly, async (req: any, res: any) => {
     await client.query('BEGIN');
     
     // 1. Get source store
-    const { rows: storeRows } = await client.query('SELECT * FROM stores WHERE id = $1', [sourceId]);
+    const { rows: storeRows } = await client.query('SELECT name, sqm, odoo_location_id FROM stores WHERE id = $1', [sourceId]);
     if (storeRows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Negozio sorgente non trovato' });
@@ -95,19 +95,25 @@ router.post('/:id/clone', adminOnly, async (req: any, res: any) => {
     const newStore = newStoreRows[0];
     
     // 3. Get source layout
-    const { rows: layoutRows } = await client.query('SELECT * FROM layouts WHERE store_id = $1', [sourceId]);
+    const { rows: layoutRows } = await client.query('SELECT items, width_m, depth_m FROM layouts WHERE store_id = $1', [sourceId]);
     if (layoutRows.length > 0) {
       const l = layoutRows[0];
+      // pg parses JSONB into objects, but INSERT usually expects a string or handled object.
+      // Stringifying is safer for the INSERT statement.
+      const itemsStr = typeof l.items === 'string' ? l.items : JSON.stringify(l.items || []);
+      
       await client.query(
-        `INSERT INTO layouts (store_id, items, width_m, depth_m) VALUES ($1, $2, $3, $4)`,
-        [newStore.id, l.items, l.width_m, l.depth_m]
+        `INSERT INTO layouts (store_id, items, width_m, depth_m, updated_at) 
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [newStore.id, itemsStr, l.width_m, l.depth_m]
       );
     }
     
     await client.query('COMMIT');
     res.status(201).json(newStore);
   } catch (err: any) {
-    await client.query('ROLLBACK');
+    if (client) await client.query('ROLLBACK');
+    console.error('[Clone Error]:', err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
