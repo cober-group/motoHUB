@@ -497,7 +497,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
                       {variant && <p style={{ margin: '2px 0', color: '#88aaff', fontSize: '0.72rem' }}>{variant}</p>}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                         <span style={{ color: '#c8ff1d', fontWeight: 800, fontSize: '1rem' }}>€{price.toFixed(2)}</span>
-                        <span style={{ background: abcColor, color: '#000', fontSize: '0.6rem', fontWeight: 900, padding: '1px 6px', borderRadius: '4px' }}>CLASSE {abcClass}</span>
+                        {isAdmin && <span style={{ background: abcColor, color: '#000', fontSize: '0.6rem', fontWeight: 900, padding: '1px 6px', borderRadius: '4px' }}>CLASSE {abcClass}</span>}
                       </div>
                       {p.default_code && <p style={{ margin: '2px 0 0', color: '#444', fontSize: '0.62rem', letterSpacing: '0.5px' }}>SKU: {p.default_code}</p>}
                     </div>
@@ -511,12 +511,12 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
                   ) : (
                     <>
                       {/* KPI grid */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr 1fr' : '1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         {[
-                          { label: 'GIACENZA', value: `${qty} pz`, color: qty < 3 ? '#ff6666' : '#fff' },
-                          { label: 'MARGINE', value: margin !== null ? `${margin.toFixed(0)}%` : '—', color: margin !== null && margin > 30 ? '#c8ff1d' : margin !== null && margin > 15 ? '#ffaa00' : '#ff6666' },
-                          { label: 'COSTO', value: cost > 0 ? `€${cost.toFixed(0)}` : '—', color: '#888' },
-                        ].map(k => (
+                          { label: 'GIACENZA', value: `${qty} pz`, color: qty < 3 ? '#ff6666' : '#fff', show: true },
+                          { label: 'MARGINE', value: margin !== null ? `${margin.toFixed(0)}%` : '—', color: margin !== null && margin > 30 ? '#c8ff1d' : margin !== null && margin > 15 ? '#ffaa00' : '#ff6666', show: isAdmin },
+                          { label: 'COSTO', value: cost > 0 ? `€${cost.toFixed(0)}` : '—', color: '#888', show: isAdmin },
+                        ].filter(k => k.show).map(k => (
                           <div key={k.label} style={{ padding: '10px 8px', background: 'rgba(0,0,0,0.3)', textAlign: 'center' }}>
                             <p style={{ margin: 0, fontSize: '0.55rem', color: '#555', fontWeight: 700, letterSpacing: '0.5px' }}>{k.label}</p>
                             <p style={{ margin: '2px 0 0', fontSize: '0.9rem', fontWeight: 800, color: k.color }}>{k.value}</p>
@@ -538,28 +538,32 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
                         ))}
                       </div>
 
-                      {/* Bottom row */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        {[
-                          { label: 'GIORNI SCORTA', value: coverageDays !== null ? `${coverageDays}gg` : '∞', color: coverageDays !== null && coverageDays < 14 ? '#ff6666' : coverageDays !== null && coverageDays < 30 ? '#ffaa00' : '#c8ff1d' },
-                          { label: 'VALORE STOCK', value: stockValue > 0 ? `€${stockValue.toFixed(0)}` : '—', color: '#fff' },
-                        ].map(k => (
-                          <div key={k.label} style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.3)' }}>
-                            <p style={{ margin: 0, fontSize: '0.55rem', color: '#555', fontWeight: 700, letterSpacing: '0.5px' }}>{k.label}</p>
-                            <p style={{ margin: '2px 0 0', fontSize: '1rem', fontWeight: 800, color: k.color }}>{k.value}</p>
-                          </div>
-                        ))}
-                      </div>
+                      {/* Bottom row (Admin only) */}
+                      {isAdmin && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          {[
+                            { label: 'GIORNI SCORTA', value: coverageDays !== null ? `${coverageDays}gg` : '∞', color: coverageDays !== null && coverageDays < 14 ? '#ff6666' : coverageDays !== null && coverageDays < 30 ? '#ffaa00' : '#c8ff1d' },
+                            { label: 'VALORE STOCK', value: stockValue > 0 ? `€${stockValue.toFixed(0)}` : '—', color: '#fff' },
+                          ].map(k => (
+                            <div key={k.label} style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.3)' }}>
+                              <p style={{ margin: 0, fontSize: '0.55rem', color: '#555', fontWeight: 700, letterSpacing: '0.5px' }}>{k.label}</p>
+                              <p style={{ margin: '2px 0 0', fontSize: '1rem', fontWeight: 800, color: k.color }}>{k.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                      {/* Insight */}
-                      <div style={{ padding: '10px 14px' }}>
-                        {qty < 3 && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#ff6666' }}>⚠ Scorta critica — considera il riordino</p>}
-                        {coverageDays !== null && coverageDays < 14 && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#ffaa00' }}>⏱ Copertura &lt; 2 settimane</p>}
-                        {abcClass === 'A' && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#c8ff1d' }}>⭐ Top performer — posizione privilegiata consigliata</p>}
-                        {abcClass === 'C' && sold90 === 0 && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#888' }}>💤 Nessuna vendita negli ultimi 90 giorni</p>}
-                        {margin !== null && margin < 15 && <p style={{ margin: 0, fontSize: '0.72rem', color: '#ff9966' }}>📉 Margine basso — verifica il prezzo</p>}
-                        {qty >= 3 && abcClass !== 'C' && coverageDays === null || (coverageDays !== null && coverageDays >= 30 && qty >= 3 && abcClass !== 'A') ? <p style={{ margin: 0, fontSize: '0.72rem', color: '#888' }}>✓ Situazione nella norma</p> : null}
-                      </div>
+                      {/* Insight (Admin only) */}
+                      {isAdmin && (
+                        <div style={{ padding: '10px 14px' }}>
+                          {qty < 3 && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#ff6666' }}>⚠ Scorta critica — considera il riordino</p>}
+                          {coverageDays !== null && coverageDays < 14 && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#ffaa00' }}>⏱ Copertura &lt; 2 settimane</p>}
+                          {abcClass === 'A' && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#c8ff1d' }}>⭐ Top performer — posizione privilegiata consigliata</p>}
+                          {abcClass === 'C' && sold90 === 0 && <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: '#888' }}>💤 Nessuna vendita negli ultimi 90 giorni</p>}
+                          {margin !== null && margin < 15 && <p style={{ margin: 0, fontSize: '0.72rem', color: '#ff9966' }}>📉 Margine basso — verifica il prezzo</p>}
+                          {qty >= 3 && abcClass !== 'C' && (coverageDays === null || coverageDays >= 30) ? <p style={{ margin: 0, fontSize: '0.72rem', color: '#888' }}>✓ Situazione nella norma</p> : null}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
