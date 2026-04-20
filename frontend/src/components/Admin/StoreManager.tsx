@@ -94,8 +94,19 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
 
   const handleDeleteStore = async (storeId: number) => {
     if (!confirm('Eliminare questo negozio e tutti i suoi dati?')) return;
+    if (!confirm('⚠️ OPERAZIONE IRREVERSIBILE! Sei davvero sicuro di voler procedere con l\'eliminazione definitiva?')) return;
     await apiFetch(`/api/stores/${storeId}`, { method: 'DELETE' });
     await loadStores();
+  };
+
+  const handleCloneStore = async (storeId: number) => {
+    if (!confirm('Clonare questo negozio e il suo layout 3D?')) return;
+    try {
+      await apiFetch(`/api/stores/${storeId}/clone`, { method: 'POST' });
+      await loadStores();
+    } catch (err: any) {
+      alert('Errore durante la clonazione: ' + err.message);
+    }
   };
 
   const handleCreateUser = async (storeId: number) => {
@@ -182,6 +193,7 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <button style={S.btnBlue} onClick={() => onVisitStore(store)}>👁 VISITA</button>
               <button style={{ ...S.btnBlue, color: '#c8ff1d', borderColor: 'rgba(200,255,29,0.3)', background: 'rgba(200,255,29,0.07)' }} onClick={() => onEditStore(store)}>✏️ MODIFICA</button>
+              <button style={{ ...S.btnBlue, color: '#ffaa00', borderColor: 'rgba(255,170,0,0.3)', background: 'rgba(255,170,0,0.07)' }} onClick={() => handleCloneStore(store.id)}>👯 CLONA</button>
               <button style={S.btnBlue} onClick={() => toggleExpand(store.id)}>{expandedStore === store.id ? '▲ CHIUDI' : '⚙ GESTISCI'}</button>
               <button style={S.btnRed} onClick={() => handleDeleteStore(store.id)}>ELIMINA</button>
             </div>
