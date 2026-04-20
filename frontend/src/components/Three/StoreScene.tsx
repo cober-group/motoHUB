@@ -8,6 +8,8 @@ import { StoreRoom } from './StoreRoom';
 import { HelmetDisplay } from './Items/HelmetDisplay';
 import { JacketRail } from './Items/JacketRail';
 import { CentralShelf } from './Items/CentralShelf';
+import { CashCounter } from './Items/CashCounter';
+import { Entrance } from './Items/Entrance';
 import * as THREE from 'three';
 
 interface StoreSceneProps {
@@ -82,8 +84,8 @@ export function StoreScene({
       return { position: [xPos, 0, zPos], rotation: [0, 0, 0], isHidden: false };
     }
 
-    // Perimeter logic (helmet / jacket)
-    const wallItems = placedItems.filter(i => i.type === 'helmet' || i.type === 'jacket');
+    // Perimeter logic (helmet / jacket / cash / entrance)
+    const wallItems = placedItems.filter(i => i.type === 'helmet' || i.type === 'jacket' || i.type === 'cash' || i.type === 'entrance');
     const globalIndex = wallItems.findIndex(wi => wi.id === id);
     if (globalIndex === -1) return { position: item.position, rotation: item.rotation, isHidden: false };
 
@@ -247,6 +249,8 @@ export function StoreScene({
               {item.type === 'helmet' && <HelmetDisplay {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
               {item.type === 'jacket' && <JacketRail {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
               {item.type === 'central' && <CentralShelf {...commonProps} gondolaWidth={Math.min(3.0, Math.max(1.5, width * 2 - 4.26))} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'central')} />}
+              {item.type === 'cash' && <CashCounter {...commonProps} />}
+              {item.type === 'entrance' && <Entrance {...commonProps} />}
             </group>
           );
         })}

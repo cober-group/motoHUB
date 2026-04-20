@@ -304,7 +304,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const sX = Math.max(1, Math.floor((availX - bodyW) / wallLen) + 1);
   const sZ = Math.max(1, Math.floor((availZ - bodyW) / wallLen) + 1);
   const maxFurnitureSlots = (sX * 2) + (sZ * 2);
-  const wallItems = placedItems.filter(i => i.type === 'helmet' || i.type === 'jacket').length;
+  const wallItems = placedItems.filter(i => i.type === 'helmet' || i.type === 'jacket' || i.type === 'cash' || i.type === 'entrance').length;
   const currentFocusedProduct = focusedProductIndex !== null ? exposedProducts[focusedProductIndex] : null;
   const centralItemsCount = placedItems.filter(i => i.type === 'central').length;
   // Same formula as StoreScene getItemPlacement — must stay in sync
@@ -389,6 +389,8 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
             <p style={{ color: '#555', fontSize: '0.7rem', fontWeight: 'bold', margin: '0 0 4px', letterSpacing: '1px' }}>ELEMENTI ARREDO</p>
             <button onClick={() => addItem('helmet')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Espositore Caschi</button>
             <button onClick={() => addItem('jacket')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Rella Giacche</button>
+            <button onClick={() => addItem('cash')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Punto Cassa</button>
+            <button onClick={() => addItem('entrance')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Entrata</button>
             <button onClick={() => addItem('central')} disabled={isIslandOverflowing} className="boost-btn-brute" style={{ opacity: isIslandOverflowing ? 0.4 : 1, cursor: isIslandOverflowing ? 'not-allowed' : 'pointer' }}>+ Isola Centrale</button>
           </div>
         )}

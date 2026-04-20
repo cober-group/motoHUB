@@ -135,7 +135,7 @@ router.get('/:id/users', adminOnly, async (req: any, res: any) => {
 
 // POST /api/stores/:id/users — admin crea utente negozio
 router.post('/:id/users', adminOnly, async (req: any, res: any) => {
-  const { email, password, is_editor = true } = req.body;
+  const { email, password, is_editor = false } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email e password obbligatori' });
   try {
     const hash = await bcrypt.hash(password, 10);

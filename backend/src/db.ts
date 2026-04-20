@@ -48,7 +48,7 @@ export async function initDb() {
   `);
 
   await pool.query(`
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_editor BOOLEAN DEFAULT true;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_editor BOOLEAN DEFAULT false;
   `);
 
   // Safe migrations for new columns

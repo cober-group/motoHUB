@@ -276,20 +276,20 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
                     style={{ ...S.input, flex: 2 }}
                     placeholder="email@negozio.it"
                     value={newUser[store.id]?.email || ''}
-                    onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], email: e.target.value, is_editor: p[store.id]?.is_editor ?? true } }))}
+                    onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], email: e.target.value, is_editor: p[store.id]?.is_editor ?? false } }))}
                   />
                   <input
                     style={{ ...S.input, flex: 1 }}
                     type="password" placeholder="Password"
                     value={newUser[store.id]?.password || ''}
-                    onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], password: e.target.value, is_editor: p[store.id]?.is_editor ?? true } }))}
+                    onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], password: e.target.value, is_editor: p[store.id]?.is_editor ?? false } }))}
                   />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
                     <input
                       type="checkbox"
-                      checked={newUser[store.id]?.is_editor ?? true}
+                      checked={newUser[store.id]?.is_editor ?? false}
                       onChange={e => setNewUser(p => ({ ...p, [store.id]: { ...p[store.id], email: p[store.id]?.email || '', password: p[store.id]?.password || '', is_editor: e.target.checked } }))}
                       style={{ accentColor: '#c8ff1d', width: '14px', height: '14px', cursor: 'pointer' }}
                     />
