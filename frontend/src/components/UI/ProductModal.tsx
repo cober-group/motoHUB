@@ -10,9 +10,11 @@ interface ProductModalProps {
   onSelect: (product: any) => void;
   loading?: boolean;
   loadingMore?: boolean;
+  trendingProducts?: any[];
+  trendingLoading?: boolean;
 }
 
-export function ProductModal({ isOpen, onClose, title, products, hasMore, onLoadMore, onSelect, loading, loadingMore }: ProductModalProps) {
+export function ProductModal({ isOpen, onClose, title, products, hasMore, onLoadMore, onSelect, loading, loadingMore, trendingProducts, trendingLoading }: ProductModalProps) {
   const [search, setSearch] = useState('');
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -70,6 +72,44 @@ export function ProductModal({ isOpen, onClose, title, products, hasMore, onLoad
           </button>
         </div>
 
+        {/* Trending strip */}
+        {(trendingLoading || (trendingProducts && trendingProducts.length > 0)) && (
+          <div style={{ padding: '16px 20px', background: '#111', borderBottom: '1px solid #222' }}>
+            <p style={{ margin: '0 0 10px', color: '#ff6b35', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '1.5px' }}>🔥 PRODOTTI DI TENDENZA — ULTIMI 30 GIORNI</p>
+            {trendingLoading ? (
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {[1,2,3,4].map(i => (
+                  <div key={i} style={{ width: '120px', height: '80px', background: '#222', borderRadius: '10px', flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite' }} />
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }} className="custom-scroller">
+                {trendingProducts!.map((p: any) => {
+                  const img = p.image_128 ? (p.image_128.startsWith('data') ? p.image_128 : `data:image/png;base64,${p.image_128}`) : null;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => onSelect(p)}
+                      style={{ flexShrink: 0, width: '120px', background: '#1a1a1a', border: '1px solid rgba(255,107,53,0.25)', borderRadius: '10px', padding: '8px', cursor: 'pointer', transition: 'border-color 0.15s, transform 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff6b35'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,107,53,0.25)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                    >
+                      <div style={{ width: '100%', height: '60px', background: '#000', borderRadius: '6px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px' }}>
+                        {img ? <img src={img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '1.4rem' }}>📦</span>}
+                      </div>
+                      <p style={{ margin: '0 0 4px', fontSize: '0.65rem', color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>{p.name}</p>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#ffcc00', fontWeight: 700 }}>€{(p.list_price ?? 0).toFixed(0)}</span>
+                        <span style={{ fontSize: '0.6rem', background: 'rgba(255,107,53,0.15)', color: '#ff6b35', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>+{p.sold_30d ?? 0}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Search */}
         <div style={{ padding: '20px', background: '#222' }}>
           <input
@@ -92,7 +132,6 @@ export function ProductModal({ isOpen, onClose, title, products, hasMore, onLoad
             <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '100px', color: '#ffcc00' }}>
               <div style={{ width: '40px', height: '40px', border: '4px solid #ffcc00', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 20px' }} />
               <p>Connessione a Odoo in corso...</p>
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           ) : filtered.length === 0 ? (
             <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#666', padding: '100px' }}>Nessun prodotto trovato</p>
@@ -135,6 +174,7 @@ export function ProductModal({ isOpen, onClose, title, products, hasMore, onLoad
           )}
         </div>
       </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:.4}50%{opacity:.8}} .custom-scroller::-webkit-scrollbar{height:4px} .custom-scroller::-webkit-scrollbar-thumb{background:#ff6b35;border-radius:2px}`}</style>
     </div>
   );
 }

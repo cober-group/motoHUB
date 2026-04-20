@@ -84,6 +84,33 @@ app.get('/api/odoo/products', authMiddleware, async (req: any, res: any) => {
   }
 });
 
+// ── Odoo: trending products ──────────────────────────────────────────
+app.get('/api/odoo/trending', authMiddleware, async (req: any, res: any) => {
+  const { fixture_type, limit } = req.query;
+
+  let locationId: number | undefined;
+  if (req.user.storeId) {
+    if (!locationCache.has(req.user.storeId)) {
+      try {
+        const { rows } = await pool.query(`SELECT odoo_location_id FROM stores WHERE id = $1`, [req.user.storeId]);
+        locationCache.set(req.user.storeId, rows[0]?.odoo_location_id ?? null);
+      } catch { locationCache.set(req.user.storeId, null); }
+    }
+    locationId = locationCache.get(req.user.storeId) ?? undefined;
+  }
+
+  try {
+    const products = await odoo.getTrendingProducts(
+      fixture_type as string | undefined,
+      locationId,
+      Math.min(12, parseInt(limit as string) || 8)
+    );
+    res.json({ products });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Odoo: product stats ───────────────────────────────────────────────
 app.get('/api/odoo/product/:id/stats', authMiddleware, async (req: any, res: any) => {
   const productId = parseInt(req.params.id);

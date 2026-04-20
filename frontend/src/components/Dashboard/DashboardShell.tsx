@@ -83,6 +83,8 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const [isModalLoading, setIsModalLoading] = useState(false);
   const [isModalLoadingMore, setIsModalLoadingMore] = useState(false);
   const [modalHasMore, setModalHasMore] = useState(false);
+  const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
   const modalOffsetRef = useRef(0);
   const modalTypeRef = useRef('');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,7 +217,13 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
     modalOffsetRef.current = 0;
     modalTypeRef.current = type;
     setModalProducts([]);
+    setTrendingProducts([]);
+    setTrendingLoading(true);
     setModalConfig({ isOpen: true, itemId, shelfIndex, type, title: `Seleziona Prodotto — ${type === 'helmet' ? 'Casco' : type === 'jacket' ? 'Giacca' : 'Arredo Centrale'}` });
+    apiFetch(`/api/odoo/trending?fixture_type=${type}&limit=10`)
+      .then(r => r.json())
+      .then(data => { setTrendingProducts(data.products || []); setTrendingLoading(false); })
+      .catch(() => setTrendingLoading(false));
     await fetchModalProducts(type, 0, false);
   };
 
@@ -556,6 +564,8 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
         loadingMore={isModalLoadingMore}
         hasMore={modalHasMore}
         onLoadMore={handleLoadMore}
+        trendingProducts={trendingProducts}
+        trendingLoading={trendingLoading}
       />
 
       <style>{`

@@ -161,6 +161,50 @@ export class OdooService {
     return this.execute('product.product', 'search_read', [domain], kwargs);
   }
 
+  async getTrendingProducts(fixtureType?: string, locationId?: number, limit = 8) {
+    const d30 = new Date();
+    d30.setDate(d30.getDate() - 30);
+    const fmt = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+
+    // Get all sold lines in last 30 days
+    const lines = await this.execute('sale.order.line', 'search_read',
+      [[['order_id.state', 'in', ['sale', 'done']], ['order_id.date_order', '>=', fmt(d30)]]],
+      { fields: ['product_id', 'product_uom_qty'], limit: 1000 }
+    );
+
+    // Aggregate quantity sold per product
+    const sums: Record<number, number> = {};
+    for (const l of lines) {
+      const pid = Array.isArray(l.product_id) ? l.product_id[0] : l.product_id;
+      sums[pid] = (sums[pid] || 0) + (l.product_uom_qty || 0);
+    }
+
+    const topIds = Object.entries(sums)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, limit * 4)
+      .map(([id]) => parseInt(id));
+
+    if (!topIds.length) return [];
+
+    const domain: any[] = [['id', 'in', topIds], ['sale_ok', '=', true], ['qty_available', '>', 0]];
+    if (fixtureType && fixtureType !== 'central') {
+      const catId = await this.getFixtureCategoryId(fixtureType);
+      if (catId) domain.push(['categ_id', 'child_of', catId]);
+    }
+
+    const kwargs: any = {
+      fields: ['name', 'display_name', 'list_price', 'image_128', 'categ_id', 'qty_available'],
+      limit: limit * 2,
+    };
+    if (locationId) kwargs.context = { location: locationId };
+
+    const products = await this.execute('product.product', 'search_read', [domain], kwargs);
+    return products
+      .map((p: any) => ({ ...p, sold_30d: sums[p.id] || 0 }))
+      .sort((a: any, b: any) => b.sold_30d - a.sold_30d)
+      .slice(0, limit);
+  }
+
   async getProductStats(productId: number, locationId?: number) {
     // Fetch cost price and base data
     const [detail] = await this.execute('product.product', 'read', [[productId]], {
