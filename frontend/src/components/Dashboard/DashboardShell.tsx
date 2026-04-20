@@ -307,12 +307,14 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const wallItems = placedItems.filter(i => i.type === 'helmet' || i.type === 'jacket').length;
   const currentFocusedProduct = focusedProductIndex !== null ? exposedProducts[focusedProductIndex] : null;
   const centralItemsCount = placedItems.filter(i => i.type === 'central').length;
-  const spacingX = 4.5, spacingZ = 3.0, islandMargin = 2.5;
-  const iAvailX = (dimensions.width * 2) - (islandMargin * 2);
-  const iAvailZ = (dimensions.length * 2) - (islandMargin * 2);
-  const iCols = Math.max(1, Math.floor(iAvailX / spacingX) + 1);
-  const iRows = Math.max(1, Math.floor(iAvailZ / spacingZ) + 1);
-  const maxIslandSlots = iCols * iRows;
+  // Same formula as StoreScene getItemPlacement — must stay in sync
+  const maxIslandSlots = (() => {
+    const gondolaWidth = Math.min(3.0, dimensions.width * 2 - 4.26);
+    if (gondolaWidth < 1.5) return 0;
+    const maxXPos = Math.max(0, (dimensions.width - 0.6) - (gondolaWidth / 2 + 0.03) - 1.5);
+    const maxZPos = Math.max(0, (dimensions.length - 0.6) - 0.26 - 1.5);
+    return (Math.floor(maxXPos * 2 / 4.5) + 1) * (Math.floor(maxZPos * 2 / 3.0) + 1);
+  })();
   const isFurnitureOverflowing = wallItems >= maxFurnitureSlots;
   const isIslandOverflowing = centralItemsCount >= maxIslandSlots;
 
