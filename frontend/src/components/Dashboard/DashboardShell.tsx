@@ -299,6 +299,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const iCols = Math.max(1, Math.floor(iAvailX / spacingX) + 1);
   const iRows = Math.max(1, Math.floor(iAvailZ / spacingZ) + 1);
   const maxIslandSlots = iCols * iRows;
+  const isFurnitureOverflowing = wallItems >= maxFurnitureSlots;
   const isIslandOverflowing = centralItemsCount >= maxIslandSlots;
 
   return (
