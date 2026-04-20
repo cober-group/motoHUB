@@ -383,7 +383,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
 
         {/* Furniture buttons */}
         {canEditLayout && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', minHeight: 0 }} className="custom-scroller">
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }} className="custom-scroller">
             <p style={{ color: '#555', fontSize: '0.7rem', fontWeight: 'bold', margin: '0 0 4px', letterSpacing: '1px' }}>ELEMENTI ARREDO</p>
             <button onClick={() => addItem('helmet')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Espositore Caschi</button>
             <button onClick={() => addItem('jacket')} disabled={isFurnitureOverflowing} className="boost-btn-brute" style={{ opacity: isFurnitureOverflowing ? 0.4 : 1, cursor: isFurnitureOverflowing ? 'not-allowed' : 'pointer' }}>+ Rella Giacche</button>

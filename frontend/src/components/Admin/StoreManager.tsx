@@ -172,7 +172,7 @@ export function StoreManager({ onVisitStore, onEditStore }: StoreManagerProps) {
   if (loading) return <p style={{ color: '#555', textAlign: 'center', padding: '40px' }}>Caricamento negozi...</p>;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0', height: '100%', overflowY: 'auto' }} className="custom-scroller">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0', height: '100%', overflowY: 'auto', overflowX: 'hidden' }} className="custom-scroller">
 
       {/* Create store */}
       <div style={{ ...S.card, border: '1px solid rgba(200,255,29,0.2)', marginBottom: '20px' }}>
