@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { CameraControls, ContactShadows, Environment } from '@react-three/drei';
+import { CameraControls, ContactShadows, Environment, PivotControls } from '@react-three/drei';
 import { useRef, useEffect } from 'react';
 import { PlacedItem } from '@/types/store';
 import { StoreRoom } from './StoreRoom';
@@ -41,6 +41,11 @@ export function StoreScene({
   const getItemPlacement = (id: string) => {
     const item = placedItems.find(i => i.id === id);
     if (!item) return null;
+
+    // Manual override: if position is manually set (not exactly [0,0,0]), use it
+    if (item.position && (item.position[0] !== 0 || item.position[1] !== 0 || item.position[2] !== 0)) {
+      return { position: item.position, rotation: item.rotation, isHidden: false };
+    }
 
     if (item.type === 'central') {
       const centralItems = placedItems.filter(i => i.type === 'central');
@@ -244,13 +249,44 @@ export function StoreScene({
             onFocusItem(item.id);
           };
 
-          return (
-            <group key={item.id} onClick={handleFocus}>
+          const renderItemContent = () => (
+            <>
               {item.type === 'helmet' && <HelmetDisplay {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
               {item.type === 'jacket' && <JacketRail {...commonProps} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
               {item.type === 'central' && <CentralShelf {...commonProps} gondolaWidth={Math.min(3.0, Math.max(1.5, width * 2 - 4.26))} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'central')} />}
               {item.type === 'cash' && <CashCounter {...commonProps} />}
               {item.type === 'entrance' && <Entrance {...commonProps} />}
+            </>
+          );
+
+          return (
+            <group key={item.id} onClick={handleFocus}>
+              {isEditMode && isFocused ? (
+                <PivotControls
+                  depthTest={false}
+                  fixed={true}
+                  scale={60}
+                  lineWidth={2}
+                  anchor={[0, 0, 0]}
+                  onDragStart={() => { if (controlsRef.current) controlsRef.current.enabled = false; }}
+                  onDragEnd={(l, deltaL, w, deltaW) => {
+                    if (controlsRef.current) controlsRef.current.enabled = true;
+                    // Extract position and rotation from the world matrix
+                    const pos = new THREE.Vector3();
+                    const quat = new THREE.Quaternion();
+                    const scale = new THREE.Vector3();
+                    w.decompose(pos, quat, scale);
+                    const rot = new THREE.Euler().setFromQuaternion(quat);
+                    onUpdateItem(item.id, [pos.x, pos.y, pos.z], [rot.x, rot.y, rot.getRotationVertical ? rot.y : rot.y, rot.z]);
+                    // Simplified rotation save: only Y axis for furniture usually
+                    onUpdateItem(item.id, [pos.x, 0, pos.z], [0, rot.y, 0]);
+                  }}
+                >
+                  {renderItemContent()}
+                </PivotControls>
+              ) : (
+                renderItemContent()
+              )}
             </group>
           );
         })}
