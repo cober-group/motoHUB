@@ -16,9 +16,9 @@ interface CentralShelfProps {
   onFocusProduct?: (itemId: string, slotIndex: number) => void;
 }
 
-// 3 shelves × 5 columns × 2 sides = 30 slots
-// slots 0-14: front side (+Z face), slots 15-29: back side (-Z face)
-const SHELF_Y = [0.52, 1.02, 1.52] as const;
+// 4 shelves × 5 columns × 2 sides = 40 slots
+// slots 0-19: front side (+Z face), slots 20-39: back side (-Z face)
+const SHELF_Y = [0.52, 1.02, 1.52, 2.02] as const;
 const SLOT_X = [-1.1, -0.55, 0, 0.55, 1.1] as const;
 const PRODUCT_Z_FRONT = 0.32;
 const PRODUCT_Z_BACK = -0.32;
@@ -168,10 +168,10 @@ export const CentralShelf = memo(function CentralShelf({
         })
       )}
 
-      {/* ── Back side products (slots 15-29) ── */}
+      {/* ── Back side products (slots 20-39) ── */}
       {SHELF_Y.map((shelfY, shelfRow) =>
         SLOT_X.map((x, col) => {
-          const slotIndex = 15 + shelfRow * 5 + col;
+          const slotIndex = 20 + shelfRow * 5 + col;
           return (
             <group key={slotIndex} position={[x, shelfY + 0.12, PRODUCT_Z_BACK]}>
               <SlotGroup

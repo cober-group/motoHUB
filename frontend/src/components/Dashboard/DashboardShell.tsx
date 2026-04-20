@@ -580,7 +580,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
         onAssign={handleBarcodeAssign}
         fetchProductByBarcode={fetchProductByBarcode}
         filledCount={barcodeItemId ? Object.keys(placedItems.find(i => i.id === barcodeItemId)?.assignedProducts || {}).length : 0}
-        totalSlots={barcodeItemId ? (() => { const t = placedItems.find(i => i.id === barcodeItemId)?.type; return t === 'helmet' ? 40 : t === 'jacket' ? 16 : 30; })() : 0}
+        totalSlots={barcodeItemId ? (() => { const t = placedItems.find(i => i.id === barcodeItemId)?.type; return t === 'helmet' ? 40 : t === 'jacket' ? 16 : 40; })() : 0}
       />
 
       {/* Product Modal */}
