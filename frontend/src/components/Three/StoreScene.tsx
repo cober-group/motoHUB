@@ -123,14 +123,19 @@ export function StoreScene({
       };
     }
 
-    // Manual override: only for non-central wall items
-    if (item.position && (item.position[0] !== 0 || item.position[1] !== 0 || item.position[2] !== 0)) {
+    // Manual 3D override: only for items NOT slot-encoded (position[1] !== -1) with a real manual pos
+    if (item.position[1] !== -1 &&
+        (item.position[0] !== 0 || item.position[1] !== 0 || item.position[2] !== 0)) {
       return { position: item.position, rotation: item.rotation, isHidden: false };
     }
 
     // Perimeter logic (helmet / jacket / cash / entrance)
+    // Slot encoding: position=[slotIndex, -1, 0] → fixed slot, not shifted by deletions
+    // Legacy: position=[0,0,0] → derive slot from array index
     const wallItems = placedItems.filter(i => i.type === 'helmet' || i.type === 'jacket' || i.type === 'cash' || i.type === 'entrance');
-    const globalIndex = wallItems.findIndex(wi => wi.id === id);
+    const globalIndex = item.position[1] === -1
+      ? Math.round(item.position[0])
+      : wallItems.findIndex(wi => wi.id === id);
     if (globalIndex === -1) return { position: item.position, rotation: item.rotation, isHidden: false };
 
     const cornerMargin = 0.8;
@@ -327,51 +332,49 @@ export function StoreScene({
                   onDrag={(_l, _deltaL, w) => {
                     lastMatrix.current.copy(w);
 
-                    // REAL-TIME RAIL SLIDING for wall items
-                    {
-                      const pos = new THREE.Vector3().setFromMatrixPosition(w);
-                      
-                      const cornerMargin = 0.8, itemBodyWidth = 3.0, currentWallLength = 3.5;
-                      const availX = (width * 2) - 2 * cornerMargin;
-                      const availZ = (depth * 2) - 2 * cornerMargin;
-                      const slotsX = Math.max(1, Math.floor((availX - itemBodyWidth) / currentWallLength) + 1);
-                      const slotsZ = Math.max(1, Math.floor((availZ - itemBodyWidth) / currentWallLength) + 1);
+                    // REAL-TIME RAIL SLIDING: compute target slot from drag position
+                    const pos = new THREE.Vector3().setFromMatrixPosition(w);
 
-                      // 1. Identify closest wall
-                      const dists = [
-                        Math.abs(pos.x - (-width)), // Wall 0 (Left)
-                        Math.abs(pos.z - (-depth)), // Wall 1 (Top)
-                        Math.abs(pos.x - width),    // Wall 2 (Right)
-                        Math.abs(pos.z - depth)     // Wall 3 (Bottom)
-                      ];
-                      const wallIndex = dists.indexOf(Math.min(...dists));
+                    const cornerMargin = 0.8, itemBodyWidth = 3.0, currentWallLength = 3.5;
+                    const availX = (width * 2) - 2 * cornerMargin;
+                    const availZ = (depth * 2) - 2 * cornerMargin;
+                    const slotsX = Math.max(1, Math.floor((availX - itemBodyWidth) / currentWallLength) + 1);
+                    const slotsZ = Math.max(1, Math.floor((availZ - itemBodyWidth) / currentWallLength) + 1);
 
-                      // 2. Identify index in wall based on coordinate along that wall
-                      let indexInWall = 0;
-                      if (wallIndex === 0) indexInWall = Math.round((pos.z / currentWallLength) + (slotsZ - 1) / 2);
-                      else if (wallIndex === 1) indexInWall = Math.round((pos.x / currentWallLength) + (slotsX - 1) / 2);
-                      else if (wallIndex === 2) indexInWall = Math.round((-pos.z / currentWallLength) + (slotsZ - 1) / 2);
-                      else if (wallIndex === 3) indexInWall = Math.round((-pos.x / currentWallLength) + (slotsX - 1) / 2);
+                    const dists = [
+                      Math.abs(pos.x - (-width)),
+                      Math.abs(pos.z - (-depth)),
+                      Math.abs(pos.x - width),
+                      Math.abs(pos.z - depth),
+                    ];
+                    const wallIndex = dists.indexOf(Math.min(...dists));
 
-                      const wallSlotCount = (wallIndex === 0 || wallIndex === 2) ? slotsZ : slotsX;
-                      indexInWall = Math.max(0, Math.min(wallSlotCount - 1, indexInWall));
+                    let indexInWall = 0;
+                    if (wallIndex === 0) indexInWall = Math.round((pos.z / currentWallLength) + (slotsZ - 1) / 2);
+                    else if (wallIndex === 1) indexInWall = Math.round((pos.x / currentWallLength) + (slotsX - 1) / 2);
+                    else if (wallIndex === 2) indexInWall = Math.round((-pos.z / currentWallLength) + (slotsZ - 1) / 2);
+                    else if (wallIndex === 3) indexInWall = Math.round((-pos.x / currentWallLength) + (slotsX - 1) / 2);
 
-                      // 3. Calculate target global index
-                      let targetGlobalIndex = indexInWall;
-                      if (wallIndex === 1) targetGlobalIndex += slotsZ;
-                      else if (wallIndex === 2) targetGlobalIndex += (slotsZ + slotsX);
-                      else if (wallIndex === 3) targetGlobalIndex += (slotsZ * 2 + slotsX);
+                    const wallSlotCount = (wallIndex === 0 || wallIndex === 2) ? slotsZ : slotsX;
+                    indexInWall = Math.max(0, Math.min(wallSlotCount - 1, indexInWall));
 
-                      const wallItems = placedItems.filter(i => i.type !== 'central');
-                      const currentGlobalIndex = wallItems.findIndex(wi => wi.id === item.id);
+                    let targetSlot = indexInWall;
+                    if (wallIndex === 1) targetSlot += slotsZ;
+                    else if (wallIndex === 2) targetSlot += (slotsZ + slotsX);
+                    else if (wallIndex === 3) targetSlot += (slotsZ * 2 + slotsX);
 
-                      if (currentGlobalIndex !== -1 && currentGlobalIndex !== targetGlobalIndex) {
-                        onReorderItem(item.id, targetGlobalIndex);
-                      }
+                    // Compare against the item's current stored slot, not its array index
+                    const currentSlot = item.position[1] === -1 ? Math.round(item.position[0]) : -1;
+                    if (currentSlot !== targetSlot) {
+                      onReorderItem(item.id, targetSlot);
                     }
                   }}
                   onDragEnd={() => {
                     if (controlsRef.current) controlsRef.current.enabled = true;
+                    // Wall items use slot encoding — position is managed by reorderItem during drag
+                    if (item.type === 'helmet' || item.type === 'jacket' ||
+                        item.type === 'cash' || item.type === 'entrance') return;
+                    // Other draggable items store their manual 3D position
                     const pos = new THREE.Vector3();
                     const quat = new THREE.Quaternion();
                     const scale = new THREE.Vector3();

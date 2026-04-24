@@ -21,6 +21,32 @@ export interface DashboardShellProps {
 const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '');
 const PAGE_SIZE = 20;
 
+// Sentinel: wall items store their perimeter slot as position=[slotIndex, -1, 0]
+// so deletion never shifts other items (each keeps its fixed slot)
+const isWallItemType = (t: string) =>
+  t === 'helmet' || t === 'jacket' || t === 'cash' || t === 'entrance';
+
+const getStoredSlot = (item: PlacedItem, wallItems: PlacedItem[]) =>
+  item.position[1] === -1 ? Math.round(item.position[0]) : wallItems.indexOf(item);
+
+// On first load, items saved before this fix have position=[0,0,0].
+// Assign them sequential slots so they immediately behave correctly.
+const migrateWallSlots = (items: PlacedItem[]): PlacedItem[] => {
+  const usedSlots = new Set<number>(
+    items.filter(i => isWallItemType(i.type) && i.position[1] === -1).map(i => Math.round(i.position[0]))
+  );
+  let next = 0;
+  return items.map(item => {
+    if (isWallItemType(item.type) && item.position[1] !== -1 &&
+        item.position[0] === 0 && item.position[2] === 0) {
+      while (usedSlots.has(next)) next++;
+      usedSlots.add(next);
+      return { ...item, position: [next++, -1, 0] as [number, number, number] };
+    }
+    return item;
+  });
+};
+
 export function DashboardShell({ role, storeId, storeName, visitMode = false, onExitVisit }: DashboardShellProps) {
   const { user, token, logout } = useAuth();
   const apiFetch = useApiFetch();
@@ -116,7 +142,7 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
     apiFetch(`/api/stores/${resolvedStoreId}/layout`)
       .then(r => r.json())
       .then(data => {
-        setPlacedItems(data.items || []);
+        setPlacedItems(migrateWallSlots(data.items || []));
         if (data.widthM) setWidthM(data.widthM);
         if (data.depthM) setDepthM(data.depthM);
         if (data.centralRotation !== undefined) setCentralRotation(data.centralRotation);
@@ -147,7 +173,15 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   // ── Layout mutations ──────────────────────────────────────────
   const addItem = (type: PlacedItem['type']) => {
     if (!canEditLayout) return;
-    const item: PlacedItem = { id: Math.random().toString(36).slice(2, 11), type, position: [0, 0, 0], rotation: [0, 0, 0] };
+    let pos: [number, number, number] = [0, 0, 0];
+    if (isWallItemType(type)) {
+      const wallItems = placedItems.filter(i => isWallItemType(i.type));
+      const used = new Set(wallItems.map(i => getStoredSlot(i, wallItems)));
+      let slot = 0;
+      while (used.has(slot)) slot++;
+      pos = [slot, -1, 0];
+    }
+    const item: PlacedItem = { id: Math.random().toString(36).slice(2, 11), type, position: pos, rotation: [0, 0, 0] };
     setPlacedItems(prev => { const next = [...prev, item]; saveLayout(next); return next; });
   };
 
@@ -155,20 +189,25 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
     setPlacedItems(prev => { const next = prev.map(i => i.id === id ? { ...i, position, rotation } : i); saveLayout(next); return next; });
   };
 
-  const reorderItem = (id: string, targetIndex: number) => {
+  const reorderItem = (id: string, targetSlot: number) => {
     setPlacedItems(prev => {
-      const wallItems = prev.filter(i => i.type === 'helmet' || i.type === 'jacket' || i.type === 'cash' || i.type === 'entrance');
-      const others = prev.filter(i => !(i.type === 'helmet' || i.type === 'jacket' || i.type === 'cash' || i.type === 'entrance'));
+      const wallItems = prev.filter(i => isWallItemType(i.type));
+      const dragged = wallItems.find(i => i.id === id);
+      if (!dragged) return prev;
 
-      const currentIndex = wallItems.findIndex(i => i.id === id);
-      if (currentIndex === -1 || currentIndex === targetIndex) return prev;
+      const draggedSlot = getStoredSlot(dragged, wallItems);
+      if (draggedSlot === targetSlot) return prev;
 
-      const newWallItems = [...wallItems];
-      const [item] = newWallItems.splice(currentIndex, 1);
-      // Reset position/rotation to [0,0,0] to ensure it snaps back to rail logic
-      newWallItems.splice(targetIndex, 0, { ...item, position: [0, 0, 0], rotation: [0, 0, 0] });
+      // Swap: whoever currently occupies targetSlot gets the dragged item's old slot
+      const occupant = wallItems.find(i => getStoredSlot(i, wallItems) === targetSlot && i.id !== id);
 
-      const next = [...newWallItems, ...others];
+      const next = prev.map(i => {
+        if (i.id === id)
+          return { ...i, position: [targetSlot, -1, 0] as [number, number, number], rotation: [0, 0, 0] as [number, number, number] };
+        if (occupant && i.id === occupant.id)
+          return { ...i, position: [draggedSlot, -1, 0] as [number, number, number], rotation: [0, 0, 0] as [number, number, number] };
+        return i;
+      });
       saveLayout(next);
       return next;
     });
