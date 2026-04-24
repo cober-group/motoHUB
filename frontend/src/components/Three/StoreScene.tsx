@@ -21,6 +21,8 @@ interface StoreSceneProps {
   focusedItemId: string | null;
   focusedProductIndex: number | null;
   exposedProducts: any[];
+  centralRotation: number;
+  centralCompact: boolean;
   onFocusItem: (id: string | null) => void;
   onFocusProduct: (itemId: string, slotIndex: number) => void;
   onUpdateItem: (id: string, pos: [number, number, number], rot: [number, number, number]) => void;
@@ -33,6 +35,7 @@ interface StoreSceneProps {
 export function StoreScene({
   placedItems, isEditMode, width, depth,
   focusedItemId, focusedProductIndex, exposedProducts,
+  centralRotation, centralCompact,
   onFocusItem, onFocusProduct,
   onUpdateItem, onReorderItem, onRemoveItem, onOpenSelector, onOpenBarcodeScanner
 }: StoreSceneProps) {
@@ -40,43 +43,50 @@ export function StoreScene({
   const lastMatrix = useRef<THREE.Matrix4>(new THREE.Matrix4());
 
   // --- DETERMINISTIC PLACEMENT HELPER ---
-  const getItemPlacement = (id: string) => {
+  const getItemPlacement = (id: string): {
+    position: [number, number, number];
+    rotation: [number, number, number];
+    isHidden: boolean;
+    isJoinedLeft?: boolean;
+    isJoinedRight?: boolean;
+  } | null => {
     const item = placedItems.find(i => i.id === id);
     if (!item) return null;
-
-    // Manual override: if position is manually set (not exactly [0,0,0]), use it
-    if (item.position && (item.position[0] !== 0 || item.position[1] !== 0 || item.position[2] !== 0)) {
-      return { position: item.position, rotation: item.rotation, isHidden: false };
-    }
 
     if (item.type === 'central') {
       const centralItems = placedItems.filter(i => i.type === 'central');
       const centralIndex = centralItems.findIndex(ci => ci.id === id);
-      if (centralIndex === -1) return { position: item.position, rotation: item.rotation, isHidden: false };
+      if (centralIndex === -1) return { position: [0, 0, 0], rotation: [0, 0, 0], isHidden: false };
 
       // Gondola width scales with store width to keep 1.5m aisles on both sides.
-      // Formula: gondolaWidth = (width - 0.6 - 1.5 - 0.03) * 2 = width*2 - 4.26
       const gondolaWidth = Math.min(3.0, width * 2 - 4.26);
-      if (gondolaWidth < 1.5) return { position: item.position, rotation: item.rotation, isHidden: true };
+      if (gondolaWidth < 1.5) return { position: [0, 0, 0], rotation: [0, 0, 0], isHidden: true };
 
-      const gondolaHalfWidth = gondolaWidth / 2 + 0.03; // include upright
+      const gondolaHalfWidth = gondolaWidth / 2 + 0.03;
       const gondolaHalfDepth = 0.26;
       const minAisle = 1.5;
       const wallMargin = 0.6;
 
-      // Max gondola-center distance from origin that still clears wall fixtures
-      const maxXPos = Math.max(0, (width - wallMargin) - gondolaHalfWidth - minAisle);
-      const maxZPos = Math.max(0, (depth - wallMargin) - gondolaHalfDepth - minAisle);
+      // At 90° rotation the gondola's length axis becomes world-Z so X/Z footprints swap
+      const isRotated = Math.abs(centralRotation) > 0.1;
+      const footprintX = isRotated ? gondolaHalfDepth : gondolaHalfWidth;
+      const footprintZ = isRotated ? gondolaHalfWidth : gondolaHalfDepth;
 
-      const spacingX = 4.5;
-      const spacingZ = 3.0;
+      const maxXPos = Math.max(0, (width - wallMargin) - footprintX - minAisle);
+      const maxZPos = Math.max(0, (depth - wallMargin) - footprintZ - minAisle);
+
+      // Compact: gondolas touch (spacing = gondola width + shared-upright gap)
+      const compactSpacing = gondolaWidth + 0.06;
+      // At 90°: long axis is Z, so compact/normal spacing applies to Z; X gets the 3m depth spacing
+      const spacingX = isRotated ? 3.0 : (centralCompact ? compactSpacing : 4.5);
+      const spacingZ = isRotated ? (centralCompact ? compactSpacing : 4.5) : 3.0;
 
       const numCols = Math.floor(maxXPos * 2 / spacingX) + 1;
       const numRows = Math.floor(maxZPos * 2 / spacingZ) + 1;
       const maxIslands = numCols * numRows;
 
       if (centralIndex >= maxIslands) {
-        return { position: item.position, rotation: item.rotation, isHidden: true };
+        return { position: [0, 0, 0], rotation: [0, 0, 0], isHidden: true };
       }
 
       const col = centralIndex % numCols;
@@ -88,7 +98,34 @@ export function StoreScene({
       const xPos = numCols > 1 ? -(totalW / 2) + col * spacingX : 0;
       const zPos = numRows > 1 ? -(totalD / 2) + row * spacingZ : 0;
 
-      return { position: [xPos, 0, zPos], rotation: [0, 0, 0], isHidden: false };
+      // Determine which uprights to omit when gondolas are joined
+      let isJoinedLeft = false;
+      let isJoinedRight = false;
+      if (centralCompact) {
+        if (!isRotated) {
+          // 0°: long axis = X (numCols). Left upright faces -X (col-1), right faces +X (col+1)
+          isJoinedLeft = col > 0;
+          isJoinedRight = col < numCols - 1 && centralIndex + 1 < centralItems.length;
+        } else {
+          // 90°: long axis = Z (numRows). Gondola "left" upright faces world +Z (row+1),
+          // "right" upright faces world -Z (row-1)
+          isJoinedLeft = row < numRows - 1 && centralIndex + numCols < centralItems.length;
+          isJoinedRight = row > 0;
+        }
+      }
+
+      return {
+        position: [xPos, 0, zPos],
+        rotation: [0, centralRotation, 0],
+        isHidden: false,
+        isJoinedLeft,
+        isJoinedRight,
+      };
+    }
+
+    // Manual override: only for non-central wall items
+    if (item.position && (item.position[0] !== 0 || item.position[1] !== 0 || item.position[2] !== 0)) {
+      return { position: item.position, rotation: item.rotation, isHidden: false };
     }
 
     // Perimeter logic (helmet / jacket / cash / entrance)
@@ -251,6 +288,9 @@ export function StoreScene({
             onFocusItem(item.id);
           };
 
+          const isJoinedLeft = placement.isJoinedLeft ?? false;
+          const isJoinedRight = placement.isJoinedRight ?? false;
+
           const renderItemContent = (overrides?: { position?: [number, number, number], rotation?: [number, number, number] }) => {
             const props = {
               ...commonProps,
@@ -261,7 +301,7 @@ export function StoreScene({
               <>
                 {item.type === 'helmet' && <HelmetDisplay {...props} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'helmet')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'helmet')} />}
                 {item.type === 'jacket' && <JacketRail {...props} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'jacket')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'jacket')} />}
-                {item.type === 'central' && <CentralShelf {...props} gondolaWidth={Math.min(3.0, Math.max(1.5, width * 2 - 4.26))} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'central')} />}
+                {item.type === 'central' && <CentralShelf {...props} gondolaWidth={Math.min(3.0, Math.max(1.5, width * 2 - 4.26))} onFocusProduct={onFocusProduct} onOpenSelector={(id, s) => onOpenSelector(id, s, 'central')} onOpenBarcodeScanner={(id) => onOpenBarcodeScanner(id, 0, 'central')} isJoinedLeft={isJoinedLeft} isJoinedRight={isJoinedRight} />}
                 {item.type === 'cash' && <CashCounter {...props} />}
                 {item.type === 'entrance' && <Entrance {...props} />}
               </>
@@ -270,7 +310,7 @@ export function StoreScene({
 
           return (
             <group key={item.id} onClick={handleFocus}>
-              {isEditMode && isFocused ? (
+              {isEditMode && isFocused && item.type !== 'central' ? (
                 <PivotControls
                   activeAxes={[true, false, true, false, true, false] as any}
                   depthTest={false}
@@ -284,11 +324,11 @@ export function StoreScene({
                     new THREE.Vector3(1, 1, 1)
                   )}
                   onDragStart={() => { if (controlsRef.current) controlsRef.current.enabled = false; }}
-                  onDrag={(l, deltaL, w) => { 
-                    lastMatrix.current.copy(w); 
-                    
+                  onDrag={(_l, _deltaL, w) => {
+                    lastMatrix.current.copy(w);
+
                     // REAL-TIME RAIL SLIDING for wall items
-                    if (item.type !== 'central') {
+                    {
                       const pos = new THREE.Vector3().setFromMatrixPosition(w);
                       
                       const cornerMargin = 0.8, itemBodyWidth = 3.0, currentWallLength = 3.5;
@@ -332,23 +372,17 @@ export function StoreScene({
                   }}
                   onDragEnd={() => {
                     if (controlsRef.current) controlsRef.current.enabled = true;
-                    if (item.type === 'central') {
-                      const pos = new THREE.Vector3();
-                      const quat = new THREE.Quaternion();
-                      const scale = new THREE.Vector3();
-                      lastMatrix.current.decompose(pos, quat, scale);
-                      const rot = new THREE.Euler().setFromQuaternion(quat);
-
-                      // SNAP ROTATION to 90 degree increments
-                      const snap = Math.PI / 2;
-                      const snappedRotY = Math.round(rot.y / snap) * snap;
-
-                      // CLAMPING: Keep items inside room limits [-width, +width] and [-depth, +depth]
-                      const margin = 0.5;
-                      const clampedX = Math.max(-width + margin, Math.min(width - margin, pos.x));
-                      const clampedZ = Math.max(-depth + margin, Math.min(depth - margin, pos.z));
-                      onUpdateItem(item.id, [clampedX, 0, clampedZ], [0, snappedRotY, 0]);
-                    }
+                    const pos = new THREE.Vector3();
+                    const quat = new THREE.Quaternion();
+                    const scale = new THREE.Vector3();
+                    lastMatrix.current.decompose(pos, quat, scale);
+                    const rot = new THREE.Euler().setFromQuaternion(quat);
+                    const snap = Math.PI / 2;
+                    const snappedRotY = Math.round(rot.y / snap) * snap;
+                    const margin = 0.5;
+                    const clampedX = Math.max(-width + margin, Math.min(width - margin, pos.x));
+                    const clampedZ = Math.max(-depth + margin, Math.min(depth - margin, pos.z));
+                    onUpdateItem(item.id, [clampedX, 0, clampedZ], [0, snappedRotY, 0]);
                   }}
                 >
                   {renderItemContent({ position: [0, 0, 0], rotation: [0, 0, 0] })}

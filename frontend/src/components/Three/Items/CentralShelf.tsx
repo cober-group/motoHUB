@@ -15,6 +15,8 @@ interface CentralShelfProps {
   isEditable?: boolean;
   isFocused?: boolean;
   onFocusProduct?: (itemId: string, slotIndex: number) => void;
+  isJoinedLeft?: boolean;
+  isJoinedRight?: boolean;
 }
 
 // 4 shelves × 5 columns × 2 sides = 40 slots
@@ -77,6 +79,7 @@ export const CentralShelf = memo(function CentralShelf({
   gondolaWidth = 3.0,
   onRemove, onOpenSelector, onOpenBarcodeScanner,
   isEditable, isFocused, onFocusProduct,
+  isJoinedLeft = false, isJoinedRight = false,
 }: CentralShelfProps) {
   const totalAssigned = Object.keys(assignedProducts).length;
 
@@ -118,14 +121,18 @@ export const CentralShelf = memo(function CentralShelf({
         <boxGeometry args={[gw, 2.3, 0.06]} />
         <meshStandardMaterial color="#2a2a2a" roughness={0.8} />
       </mesh>
-      <mesh position={[-uprightX, 1.15, 0]} receiveShadow>
-        <boxGeometry args={[0.06, 2.3, 0.52]} />
-        <meshStandardMaterial color="#2a2a2a" />
-      </mesh>
-      <mesh position={[uprightX, 1.15, 0]} receiveShadow>
-        <boxGeometry args={[0.06, 2.3, 0.52]} />
-        <meshStandardMaterial color="#2a2a2a" />
-      </mesh>
+      {!isJoinedLeft && (
+        <mesh position={[-uprightX, 1.15, 0]} receiveShadow>
+          <boxGeometry args={[0.06, 2.3, 0.52]} />
+          <meshStandardMaterial color="#2a2a2a" />
+        </mesh>
+      )}
+      {!isJoinedRight && (
+        <mesh position={[uprightX, 1.15, 0]} receiveShadow>
+          <boxGeometry args={[0.06, 2.3, 0.52]} />
+          <meshStandardMaterial color="#2a2a2a" />
+        </mesh>
+      )}
       <mesh position={[0, 0.04, 0]} receiveShadow castShadow>
         <boxGeometry args={[baseW, 0.08, 0.52]} />
         <meshStandardMaterial color="#333" />

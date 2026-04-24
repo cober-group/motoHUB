@@ -85,6 +85,8 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const [modalHasMore, setModalHasMore] = useState(false);
   const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
+  const [centralRotation, setCentralRotation] = useState(0);
+  const [centralCompact, setCentralCompact] = useState(false);
   const modalOffsetRef = useRef(0);
   const modalTypeRef = useRef('');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -117,22 +119,24 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
         setPlacedItems(data.items || []);
         if (data.widthM) setWidthM(data.widthM);
         if (data.depthM) setDepthM(data.depthM);
+        if (data.centralRotation !== undefined) setCentralRotation(data.centralRotation);
+        if (data.centralCompact !== undefined) setCentralCompact(data.centralCompact);
         setLayoutLoading(false);
       })
       .catch(() => setLayoutLoading(false));
   }, [mounted, resolvedStoreId]);
 
   // ── Debounced layout save ─────────────────────────────────────
-  const saveLayout = useCallback((items: PlacedItem[], wM = widthM, dM = depthM) => {
+  const saveLayout = useCallback((items: PlacedItem[], wM = widthM, dM = depthM, cr = centralRotation, cc = centralCompact) => {
     if (!resolvedStoreId || visitMode) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       apiFetch(`/api/stores/${resolvedStoreId}/layout`, {
         method: 'PUT',
-        body: JSON.stringify({ items, widthM: wM, depthM: dM }),
+        body: JSON.stringify({ items, widthM: wM, depthM: dM, centralRotation: cr, centralCompact: cc }),
       }).catch(console.error);
     }, 800);
-  }, [resolvedStoreId, visitMode, apiFetch, widthM, depthM]);
+  }, [resolvedStoreId, visitMode, apiFetch, widthM, depthM, centralRotation, centralCompact]);
 
   // Three.js uses half-sizes: room spans [-width, +width] × [-depth, +depth]
   const dimensions = {
@@ -330,10 +334,31 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
   const maxIslandSlots = (() => {
     const gondolaWidth = Math.min(3.0, dimensions.width * 2 - 4.26);
     if (gondolaWidth < 1.5) return 0;
-    const maxXPos = Math.max(0, (dimensions.width - 0.6) - (gondolaWidth / 2 + 0.03) - 1.5);
-    const maxZPos = Math.max(0, (dimensions.length - 0.6) - 0.26 - 1.5);
-    return (Math.floor(maxXPos * 2 / 4.5) + 1) * (Math.floor(maxZPos * 2 / 3.0) + 1);
+    const gondolaHalfWidth = gondolaWidth / 2 + 0.03;
+    const isRotated = Math.abs(centralRotation) > 0.1;
+    const footprintX = isRotated ? 0.26 : gondolaHalfWidth;
+    const footprintZ = isRotated ? gondolaHalfWidth : 0.26;
+    const maxXPos = Math.max(0, (dimensions.width - 0.6) - footprintX - 1.5);
+    const maxZPos = Math.max(0, (dimensions.length - 0.6) - footprintZ - 1.5);
+    const compactSpacing = gondolaWidth + 0.06;
+    const spacingX = isRotated ? 3.0 : (centralCompact ? compactSpacing : 4.5);
+    const spacingZ = isRotated ? (centralCompact ? compactSpacing : 4.5) : 3.0;
+    return (Math.floor(maxXPos * 2 / spacingX) + 1) * (Math.floor(maxZPos * 2 / spacingZ) + 1);
   })();
+
+  const toggleCentralCompact = () => {
+    if (!canEditLayout) return;
+    const next = !centralCompact;
+    setCentralCompact(next);
+    saveLayout(placedItems, widthM, depthM, centralRotation, next);
+  };
+
+  const toggleCentralRotation = () => {
+    if (!canEditLayout) return;
+    const next = Math.abs(centralRotation) > 0.1 ? 0 : Math.PI / 2;
+    setCentralRotation(next);
+    saveLayout(placedItems, widthM, depthM, next, centralCompact);
+  };
   const isFurnitureOverflowing = wallItems >= maxFurnitureSlots;
   const isIslandOverflowing = centralItemsCount >= maxIslandSlots;
 
@@ -402,6 +427,22 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
                 <span>Isole Centrali</span><span>{centralItemsCount} / {maxIslandSlots}</span>
               </div>
             </div>
+            {canEditLayout && centralItemsCount > 0 && (
+              <div style={{ marginTop: '8px', display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={toggleCentralCompact}
+                  style={{ flex: 1, padding: '7px 6px', background: centralCompact ? 'rgba(200,255,29,0.15)' : 'rgba(255,255,255,0.04)', color: centralCompact ? '#c8ff1d' : '#888', border: `1px solid ${centralCompact ? 'rgba(200,255,29,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '8px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}
+                >
+                  {centralCompact ? '⊟ Unite' : '⊞ Unisci'}
+                </button>
+                <button
+                  onClick={toggleCentralRotation}
+                  style={{ flex: 1, padding: '7px 6px', background: Math.abs(centralRotation) > 0.1 ? 'rgba(200,255,29,0.15)' : 'rgba(255,255,255,0.04)', color: Math.abs(centralRotation) > 0.1 ? '#c8ff1d' : '#888', border: `1px solid ${Math.abs(centralRotation) > 0.1 ? 'rgba(200,255,29,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '8px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}
+                >
+                  {Math.abs(centralRotation) > 0.1 ? '↕ 90°' : '↔ 0°'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -454,6 +495,8 @@ export function DashboardShell({ role, storeId, storeName, visitMode = false, on
             focusedItemId={focusedItemId}
             focusedProductIndex={focusedProductIndex}
             exposedProducts={exposedProducts}
+            centralRotation={centralRotation}
+            centralCompact={centralCompact}
             onFocusItem={(id) => { setFocusedItemId(id); setFocusedProductIndex(null); }}
             onFocusProduct={handleProductFocus}
             onUpdateItem={updateItem}
